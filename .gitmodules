@@ -1,0 +1,3 @@
+[submodule "social-model"]
+	path = social-model
+	url = git@github.com:Kotlang/social-model.git
