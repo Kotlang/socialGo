@@ -10,6 +10,7 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
+	"github.com/thoas/go-funk"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +25,26 @@ func NewFeedpostService(db *db.SocialDb) *FeedpostService {
 	}
 }
 
+func (s *FeedpostService) saveTags(tenant string, tags []string) {
+	for _, tag := range tags {
+		existingTagRes := <-s.db.Tag(tenant).FindOneById(tag)
+
+		var existingTag *models.PostTagModel
+		// Need if-else since if existingTagRes.Value pointer is null, it cannot be typecasted.
+		if existingTagRes.Value == nil {
+			existingTag = &models.PostTagModel{
+				Tag:       tag,
+				CreatedOn: time.Now().Unix(),
+			}
+		} else {
+			existingTag = existingTagRes.Value.(*models.PostTagModel)
+		}
+
+		existingTag.NumPosts += 1
+		<-s.db.Tag(tenant).Save(existingTag)
+	}
+}
+
 func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	feedPostModel := s.db.FeedPost(tenant).GetModel(req).(*models.FeedPostModel)
@@ -31,7 +52,13 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	feedPostModel.PostType = pb.UserPostRequest_PostType_name[int32(req.PostType)]
 	feedPostModel.CreatedOn = time.Now().Unix()
 
-	<-s.db.FeedPost(tenant).Save(feedPostModel)
+	// save post
+	savePostAsync := s.db.FeedPost(tenant).Save(feedPostModel)
+
+	// save tags
+	s.saveTags(tenant, req.Tags)
+	<-savePostAsync
+
 	res := &pb.UserPostProto{}
 	copier.Copy(res, feedPostModel)
 
@@ -58,4 +85,13 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	logger.Info("Got feed as ", zap.Any("feed", feedProto))
 
 	return &pb.FeedResponse{Posts: feedProto}, nil
+}
+
+func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (*pb.TagListResponse, error) {
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+	tags := s.db.Tag(tenant).GetTagsRanked()
+
+	return &pb.TagListResponse{
+		Tag: funk.Map(tags, func(x models.PostTagModel) string { return x.Tag }).([]string),
+	}, nil
 }

@@ -16,3 +16,11 @@ func (db *SocialDb) FeedPost(tenant string) *FeedPostRepository {
 	}
 	return &FeedPostRepository{repo}
 }
+
+func (db *SocialDb) Tag(tenant string) *TagRepository {
+	repo := odm.AbstractRepository{
+		CollectionName: "tag_" + tenant,
+		Model:          reflect.TypeOf(models.PostTagModel{}),
+	}
+	return &TagRepository{repo}
+}
