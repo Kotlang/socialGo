@@ -7,6 +7,7 @@ import (
 	"github.com/Kotlang/socialGo/db"
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
+	s3client "github.com/Kotlang/socialGo/s3Client"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
@@ -93,5 +94,14 @@ func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (
 
 	return &pb.TagListResponse{
 		Tag: funk.Map(tags, func(x models.PostTagModel) string { return x.Tag }).([]string),
+	}, nil
+}
+
+func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUploadRequest) (*pb.MediaUploadURL, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+	uploadUrl, downloadUrl := s3client.GetPresignedUrlForPosts(tenant, userId, req.MediaExtension)
+	return &pb.MediaUploadURL{
+		UploadUrl: uploadUrl,
+		MediaUrl:  downloadUrl,
 	}, nil
 }
