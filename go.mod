@@ -3,7 +3,7 @@ module github.com/Kotlang/socialGo
 go 1.16
 
 require (
-	github.com/SaiNageswarS/go-api-boot v0.1.4
+	github.com/SaiNageswarS/go-api-boot v0.1.5
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/google/uuid v1.2.0
 	github.com/jinzhu/copier v0.3.2
