@@ -11,7 +11,7 @@ type SocialDb struct{}
 
 func (db *SocialDb) FeedPost(tenant string) *FeedPostRepository {
 	repo := odm.AbstractRepository{
-		CollectionName: "login_" + tenant,
+		CollectionName: "feed_post_" + tenant,
 		Model:          reflect.TypeOf(models.FeedPostModel{}),
 	}
 	return &FeedPostRepository{repo}
