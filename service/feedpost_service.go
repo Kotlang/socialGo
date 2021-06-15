@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"time"
 
 	"github.com/Kotlang/socialGo/db"
 	pb "github.com/Kotlang/socialGo/generated"
@@ -34,8 +33,7 @@ func (s *FeedpostService) saveTags(tenant string, tags []string) {
 		// Need if-else since if existingTagRes.Value pointer is null, it cannot be typecasted.
 		if existingTagRes.Value == nil {
 			existingTag = &models.PostTagModel{
-				Tag:       tag,
-				CreatedOn: time.Now().Unix(),
+				Tag: tag,
 			}
 		} else {
 			existingTag = existingTagRes.Value.(*models.PostTagModel)
@@ -51,7 +49,6 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	feedPostModel := s.db.FeedPost(tenant).GetModel(req).(*models.FeedPostModel)
 	feedPostModel.UserId = userId
 	feedPostModel.PostType = pb.UserPostRequest_PostType_name[int32(req.PostType)]
-	feedPostModel.CreatedOn = time.Now().Unix()
 
 	// save post
 	savePostAsync := s.db.FeedPost(tenant).Save(feedPostModel)
