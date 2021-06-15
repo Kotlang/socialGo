@@ -13,6 +13,7 @@ func main() {
 
 	bootServer := server.NewGoApiBoot()
 	pb.RegisterUserPostServer(bootServer.GrpcServer, inject.FeedPostService)
+	pb.RegisterPostActionsServer(bootServer.GrpcServer, inject.PostActionsService)
 
 	bootServer.Start(grpcPort, webPort)
 }

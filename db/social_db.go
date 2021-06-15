@@ -26,3 +26,12 @@ func (db *SocialDb) Tag(tenant string) *TagRepository {
 	}
 	return &TagRepository{repo}
 }
+
+func (db *SocialDb) PostLike(tenant string) *PostLikeRepository {
+	repo := odm.AbstractRepository{
+		Database:       tenant + "_social",
+		CollectionName: "likes",
+		Model:          reflect.TypeOf(models.PostLikeModel{}),
+	}
+	return &PostLikeRepository{repo}
+}

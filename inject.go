@@ -9,7 +9,8 @@ import (
 type Inject struct {
 	SocialDb *db.SocialDb
 
-	FeedPostService *service.FeedpostService
+	FeedPostService    *service.FeedpostService
+	PostActionsService *service.PostActionsService
 }
 
 func NewInject() *Inject {
@@ -19,5 +20,6 @@ func NewInject() *Inject {
 	inj.SocialDb = &db.SocialDb{}
 
 	inj.FeedPostService = service.NewFeedpostService(inj.SocialDb)
+	inj.PostActionsService = service.NewPostActionsService(inj.SocialDb)
 	return inj
 }
