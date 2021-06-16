@@ -14,11 +14,20 @@ type FeedPostRepository struct {
 
 func (r *FeedPostRepository) GetFeed(
 	postType string,
-	tagFilters []string,
+	tagFilter string,
+	referencePost string,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
 	filters := bson.M{
 		"postType": postType,
+	}
+
+	if len(tagFilter) > 0 {
+		filters["tags"] = tagFilter
+	}
+
+	if len(referencePost) > 0 {
+		filters["referencePost"] = referencePost
 	}
 
 	sort := bson.D{

@@ -63,26 +63,67 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	return res, nil
 }
 
+func (s *FeedpostService) attachPostUserInfoAsync(
+	feedPost *pb.UserPostProto,
+	userId, tenant, userType string, attachAnswers bool) chan bool {
+	done := make(chan bool)
+
+	go func() {
+		feedPost.HasFeedUserLiked = s.db.PostLike(tenant).IsExistsById(
+			(&models.PostLikeModel{UserId: userId, PostId: feedPost.PostId}).Id(),
+		)
+
+		if attachAnswers {
+			answers := s.db.FeedPost(tenant).GetFeed(
+				pb.UserPostRequest_QnA_ANSWER.String(),
+				"",
+				feedPost.PostId,
+				int64(0),
+				int64(10))
+			answersProto := []*pb.UserPostProto{}
+			copier.Copy(&answersProto, answers)
+			feedPost.AnswersThread = answersProto
+		}
+
+		done <- true
+	}()
+
+	return done
+}
+
 func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.FeedResponse, error) {
-	_, tenant := auth.GetUserIdAndTenant(ctx)
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
 		req.PageSize = 10
 	}
 	logger.Info("Getting feed for ", zap.String("feedType", req.PostType.String()))
 
-	tagFilters := []string{}
+	var tagFilter string
 	if req.Filters != nil {
-		tagFilters = req.Filters.Tags
+		tagFilter = req.Filters.Tag
 	}
 
-	feed := s.db.FeedPost(tenant).GetFeed(req.PostType.String(), tagFilters, int64(req.PageNumber), int64(req.PageSize))
+	feed := s.db.FeedPost(tenant).GetFeed(
+		req.PostType.String(),
+		tagFilter,
+		"",
+		int64(req.PageNumber),
+		int64(req.PageSize))
 
 	feedProto := []*pb.UserPostProto{}
-
 	copier.Copy(&feedProto, feed)
-	logger.Info("Got feed as ", zap.Any("feed", feedProto))
 
-	return &pb.FeedResponse{Posts: feedProto}, nil
+	response := &pb.FeedResponse{Posts: feedProto}
+
+	attachAnswers := (req.PostType == pb.GetFeedRequest_QnA_QUESTION)
+	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
+		return s.attachPostUserInfoAsync(x, userId, tenant, "default", attachAnswers)
+	}).([]chan bool)
+	for _, promise := range addUserPostActionsPromises {
+		<-promise
+	}
+
+	return response, nil
 }
 
 func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (*pb.TagListResponse, error) {
