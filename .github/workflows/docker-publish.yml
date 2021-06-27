@@ -46,7 +46,7 @@ jobs:
         run: ./build.sh
 
       - name: Build docker image
-        run: docker build -t kotlangauthsvc.azurecr.io/$IMAGE_NAME:${{ github.sha }} .
+        run: docker build -t kotlangauthsvc.azurecr.io/$IMAGE_NAME:latest .
 
       - name: Log into registry
         uses: azure/docker-login@v1
@@ -57,7 +57,7 @@ jobs:
 
       - name: Push image
         run: |
-          docker push kotlangauthsvc.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+          docker push kotlangauthsvc.azurecr.io/$IMAGE_NAME:latest
 
   deploy-service:
     needs: build-service
@@ -98,7 +98,7 @@ jobs:
             kubernetes/deployment.yml
             kubernetes/service.yml
           images: |
-            kotlangauthsvc.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+            kotlangauthsvc.azurecr.io/$IMAGE_NAME:latest
           imagepullsecrets: |
             acr-secrets
           namespace: default
