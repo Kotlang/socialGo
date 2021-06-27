@@ -24,7 +24,7 @@ func NewPostActionsService(db *db.SocialDb) *PostActionsService {
 	}
 }
 
-func (s *PostActionsService) LikePost(ctx context.Context, req *pb.PostIdRequest) (*pb.StatusResponse, error) {
+func (s *PostActionsService) LikePost(ctx context.Context, req *pb.PostIdRequest) (*pb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	postLikeModel := &models.PostLikeModel{
 		PostId: req.PostId,
@@ -47,10 +47,10 @@ func (s *PostActionsService) LikePost(ctx context.Context, req *pb.PostIdRequest
 		<-likeAsyncSaveReq
 	}
 
-	return &pb.StatusResponse{Status: "success"}, nil
+	return &pb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *PostActionsService) UnLikePost(ctx context.Context, req *pb.PostIdRequest) (*pb.StatusResponse, error) {
+func (s *PostActionsService) UnLikePost(ctx context.Context, req *pb.PostIdRequest) (*pb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	postLikeModel := &models.PostLikeModel{
 		PostId: req.PostId,
@@ -73,5 +73,5 @@ func (s *PostActionsService) UnLikePost(ctx context.Context, req *pb.PostIdReque
 		<-unLikeAsyncSaveReq
 	}
 
-	return &pb.StatusResponse{Status: "success"}, nil
+	return &pb.SocialStatusResponse{Status: "success"}, nil
 }

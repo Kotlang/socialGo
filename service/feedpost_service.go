@@ -64,6 +64,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 }
 
 func (s *FeedpostService) attachPostUserInfoAsync(
+	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
 	userId, tenant, userType string, attachAnswers bool) chan bool {
 	done := make(chan bool)
@@ -72,6 +73,15 @@ func (s *FeedpostService) attachPostUserInfoAsync(
 		feedPost.HasFeedUserLiked = s.db.PostLike(tenant).IsExistsById(
 			(&models.PostLikeModel{UserId: userId, PostId: feedPost.PostId}).Id(),
 		)
+		// get post author profile
+		authorProfile := db.GetAuthorProfile(feedPost.UserId, grpcContext)
+		if authorProfile != nil {
+			feedPost.AuthorInfo = &pb.AuthorInfo{
+				Name:       authorProfile.Name,
+				PhotoUrl:   authorProfile.PhotoUrl,
+				Occupation: "farmer",
+			}
+		}
 
 		if attachAnswers {
 			answers := s.db.FeedPost(tenant).GetFeed(
@@ -117,7 +127,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 
 	attachAnswers := (req.PostType == pb.GetFeedRequest_QnA_QUESTION)
 	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
-		return s.attachPostUserInfoAsync(x, userId, tenant, "default", attachAnswers)
+		return s.attachPostUserInfoAsync(ctx, x, userId, tenant, "default", attachAnswers)
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
 		<-promise

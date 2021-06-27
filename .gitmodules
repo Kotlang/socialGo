@@ -1,3 +1,6 @@
 [submodule "social-model"]
 	path = social-model
 	url = git@github.com:Kotlang/social-model.git
+[submodule "auth-model"]
+	path = auth-model
+	url = git@github.com:Kotlang/auth-model.git
