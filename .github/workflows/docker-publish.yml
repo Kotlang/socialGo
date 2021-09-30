@@ -81,16 +81,6 @@ jobs:
           arguments: --from-literal=mongoUri=${{ secrets.MONGO_URI }} --from-literal=accessSecret=${{ secrets.JWT_ACCESS_KEY }} --from-literal=awsAccessKeyId=${{ secrets.AWS_ACCESS_KEY }} --from-literal=awsSecretAccessKey=${{ secrets.AWS_ACCESS_SECRET }}
           secret-name: app-secrets
 
-      - name: Set k8s secrets to access ACR
-        uses: azure/k8s-create-secret@v1
-        with:
-          container-registry-url: kotlangauthsvc.azurecr.io
-          container-registry-username: ${{ secrets.ACR_USERNAME }}
-          container-registry-password: ${{ secrets.ACR_PASSWORD }}
-          secret-name: acr-secrets
-          namespace: default
-          force: true
-
       - name: AKS Deploy
         uses: azure/k8s-deploy@v1
         with:
