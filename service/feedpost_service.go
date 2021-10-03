@@ -12,6 +12,8 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/thoas/go-funk"
 	"go.uber.org/zap"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type FeedpostService struct {
@@ -63,6 +65,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	return res, nil
 }
 
+// Adds additional userProfile data, comments/answers to feedPost parameter.
 func (s *FeedpostService) attachPostUserInfoAsync(
 	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
@@ -99,6 +102,21 @@ func (s *FeedpostService) attachPostUserInfoAsync(
 	}()
 
 	return done
+}
+
+func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.UserPostProto, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+	post := <-s.db.FeedPost(tenant).FindOneById(req.PostId)
+
+	if post.Err != nil {
+		return nil, status.Error(codes.Internal, post.Err.Error())
+	}
+
+	postProto := pb.UserPostProto{}
+	copier.Copy(&postProto, post.Value)
+
+	<-s.attachPostUserInfoAsync(ctx, &postProto, userId, tenant, "default", true)
+	return &postProto, nil
 }
 
 func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.FeedResponse, error) {
