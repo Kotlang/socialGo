@@ -1,4 +1,4 @@
-package db
+package extensions
 
 import (
 	"context"
@@ -11,7 +11,17 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func GetAuthorProfile(userId string, grpcContext context.Context) *pb.UserProfileProto {
+type AuthClient struct {
+	grpcContext context.Context
+}
+
+func NewAuthClient(grpcContext context.Context) *AuthClient {
+	return &AuthClient{
+		grpcContext: grpcContext,
+	}
+}
+
+func (c *AuthClient) GetAuthorProfile(userId string) *pb.UserProfileProto {
 	conn, err := grpc.Dial("20.193.225.77:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		logger.Error("Failed getting connection with auth service", zap.Error(err))
@@ -21,7 +31,7 @@ func GetAuthorProfile(userId string, grpcContext context.Context) *pb.UserProfil
 
 	client := pb.NewProfileClient(conn)
 
-	jwtToken, err := grpc_auth.AuthFromMD(grpcContext, "bearer")
+	jwtToken, err := grpc_auth.AuthFromMD(c.grpcContext, "bearer")
 	if err != nil {
 		logger.Error("Failed getting jwt token", zap.Error(err))
 		return nil

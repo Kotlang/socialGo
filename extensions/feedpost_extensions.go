@@ -1,0 +1,80 @@
+package extensions
+
+import (
+	"github.com/Kotlang/socialGo/db"
+	pb "github.com/Kotlang/socialGo/generated"
+	"github.com/Kotlang/socialGo/models"
+	"github.com/jinzhu/copier"
+)
+
+func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
+	savedTagsPromise := make(chan bool)
+
+	go func() {
+		for _, tag := range tags {
+			existingTagRes := <-db.Tag(tenant).FindOneById(tag)
+
+			var existingTag *models.PostTagModel
+			// Need if-else since if existingTagRes.Value pointer is null, it cannot be typecasted.
+			if existingTagRes.Value == nil {
+				existingTag = &models.PostTagModel{
+					Tag: tag,
+				}
+			} else {
+				existingTag = existingTagRes.Value.(*models.PostTagModel)
+			}
+
+			existingTag.NumPosts += 1
+			<-db.Tag(tenant).Save(existingTag)
+		}
+
+		savedTagsPromise <- true
+	}()
+
+	return savedTagsPromise
+}
+
+// Adds additional userProfile data, comments/answers to feedPost parameter.
+func AttachPostUserInfoAsync(
+	socialDb *db.SocialDb,
+	authClient *AuthClient,
+	feedPost *pb.UserPostProto,
+	userId, tenant, userType string, attachAnswers bool) chan bool {
+	done := make(chan bool)
+
+	go func() {
+		feedPost.HasFeedUserLiked = socialDb.PostLike(tenant).IsExistsById(
+			(&models.PostLikeModel{UserId: userId, PostId: feedPost.PostId}).Id(),
+		)
+		// get post author profile
+		authorProfile := authClient.GetAuthorProfile(feedPost.UserId)
+		if authorProfile != nil {
+			feedPost.AuthorInfo = &pb.AuthorInfo{
+				Name:       authorProfile.Name,
+				PhotoUrl:   authorProfile.PhotoUrl,
+				Occupation: "farmer",
+			}
+		}
+
+		if attachAnswers {
+			answers := socialDb.FeedPost(tenant).GetFeed(
+				pb.UserPostRequest_QnA_ANSWER.String(),
+				"",
+				feedPost.PostId,
+				int64(0),
+				int64(10))
+			answersProto := []*pb.UserPostProto{}
+			copier.Copy(&answersProto, answers)
+			feedPost.AnswersThread = answersProto
+
+			// recursively attach authorInfo to answers.
+			for _, answerProto := range feedPost.AnswersThread {
+				<-AttachPostUserInfoAsync(socialDb, authClient, answerProto, userId, tenant, userType, false)
+			}
+		}
+
+		done <- true
+	}()
+
+	return done
+}
