@@ -161,3 +161,27 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 	stream.SendAndClose(&pb.UploadPostMediaResponse{UploadPath: res.Value.(string)})
 	return nil
 }
+
+func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequest) (*pb.SocialStatusResponse, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+
+	post := <-s.db.FeedPost(tenant).FindOneById(req.Id)
+	if post.Err != nil {
+		return nil, status.Error(codes.NotFound, post.Err.Error())
+	}
+
+	postEntity := post.Value.(*models.FeedPostModel)
+	if postEntity.UserId != userId {
+		return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
+	}
+
+	err := <-s.db.FeedPost(tenant).DeleteById(req.Id)
+
+	if err != nil {
+		return nil, err
+	} else {
+		return &pb.SocialStatusResponse{
+			Status: "success",
+		}, nil
+	}
+}
