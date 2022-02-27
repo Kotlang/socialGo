@@ -97,7 +97,6 @@ jobs:
           container-registry-password: ${{ secrets.ACR_PASSWORD }}
           secret-name: acr-secrets
           namespace: default
-          force: true
 
       - name: AKS Deploy
         uses: azure/k8s-deploy@v1
