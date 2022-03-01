@@ -145,13 +145,27 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 		}
 		return req.ChunkData, nil
 	})
+
+	if err != nil {
+		logger.Error("Failed uploading image", zap.Error(err))
+		return err
+	}
+	
+	mediaExtension, err := bootUtils.BufferGrpcServerStream(stream, func() ([]byte, error) {
+		req, err := stream.Recv()
+		if err != nil {
+			return nil, err
+		}
+		return []byte(req.MediaExtension), nil
+	})
+
 	if err != nil {
 		logger.Error("Failed uploading image", zap.Error(err))
 		return err
 	}
 
 	// upload imageData to Azure bucket.
-	path := fmt.Sprintf("%s/%s/%d.jpg", tenant, userId, time.Now().Unix())
+	path := fmt.Sprintf("%s/%s/%d.%s", tenant, userId, time.Now().Unix(), mediaExtension.String())
 	res := <-azure.Storage.UploadStream("social-posts", path, imageData)
 
 	if res.Err != nil {
