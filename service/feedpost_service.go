@@ -138,11 +138,15 @@ func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUp
 func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServer) error {
 	userId, tenant := auth.GetUserIdAndTenant(stream.Context())
 	logger.Info("Uploading post media", zap.String("userId", userId), zap.String("tenant", tenant))
+	mediaExtension := "jpg"
+
 	imageData, err := bootUtils.BufferGrpcServerStream(stream, func() ([]byte, error) {
 		req, err := stream.Recv()
 		if err != nil {
 			return nil, err
 		}
+
+		mediaExtension = req.MediaExtension
 		return req.ChunkData, nil
 	})
 	if err != nil {
@@ -151,7 +155,7 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 	}
 
 	// upload imageData to Azure bucket.
-	path := fmt.Sprintf("%s/%s/%d.jpg", tenant, userId, time.Now().Unix())
+	path := fmt.Sprintf("%s/%s/%d.%s", tenant, userId, time.Now().Unix(), mediaExtension)
 	res := <-azure.Storage.UploadStream("social-posts", path, imageData)
 
 	if res.Err != nil {
