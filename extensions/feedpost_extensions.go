@@ -12,20 +12,18 @@ func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 
 	go func() {
 		for _, tag := range tags {
-			existingTagRes := <-db.Tag(tenant).FindOneById(tag)
-
-			var existingTag *models.PostTagModel
-			// Need if-else since if existingTagRes.Value pointer is null, it cannot be typecasted.
-			if existingTagRes.Value == nil {
-				existingTag = &models.PostTagModel{
-					Tag: tag,
+			existingTagChan, errChan := db.Tag(tenant).FindOneById(tag)
+			select {
+			case existingTag := <-existingTagChan:
+				existingTag.NumPosts++
+				<-db.Tag(tenant).Save(existingTag)
+			case <-errChan:
+				newTag := &models.PostTagModel{
+					Tag:      tag,
+					NumPosts: 1,
 				}
-			} else {
-				existingTag = existingTagRes.Value.(*models.PostTagModel)
+				<-db.Tag(tenant).Save(newTag)
 			}
-
-			existingTag.NumPosts += 1
-			<-db.Tag(tenant).Save(existingTag)
 		}
 
 		savedTagsPromise <- true

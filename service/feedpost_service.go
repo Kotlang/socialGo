@@ -36,7 +36,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	// map proto to model.
-	feedPostModel := s.db.FeedPost(tenant).GetModel(req).(*models.FeedPostModel)
+	feedPostModel := s.db.FeedPost(tenant).GetModel(req)
 	feedPostModel.UserId = userId
 	feedPostModel.PostType = pb.UserPostRequest_PostType_name[int32(req.PostType)]
 
@@ -48,10 +48,14 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 
 	// if it is a comment/answer increment numReplies
 	if len(feedPostModel.ReferencePost) > 0 {
-		parentPostRes := <-s.db.FeedPost(tenant).FindOneById(feedPostModel.ReferencePost)
-		parentPost := parentPostRes.Value.(*models.FeedPostModel)
-		parentPost.NumReplies = parentPost.NumReplies + 1
-		<-s.db.FeedPost(tenant).Save(parentPost)
+		parentPostChan, errChan := s.db.FeedPost(tenant).FindOneById(feedPostModel.ReferencePost)
+		select {
+		case parentPost := <-parentPostChan:
+			parentPost.NumReplies = parentPost.NumReplies + 1
+			<-s.db.FeedPost(tenant).Save(parentPost)
+		case err := <-errChan:
+			return nil, status.Error(codes.NotFound, "Referenced Post not found. "+err.Error())
+		}
 	}
 
 	// wait for async operations to finish.
@@ -66,14 +70,15 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 
 func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.UserPostProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	post := <-s.db.FeedPost(tenant).FindOneById(req.PostId)
-
-	if post.Err != nil {
-		return nil, status.Error(codes.Internal, post.Err.Error())
-	}
-
 	postProto := pb.UserPostProto{}
-	copier.Copy(&postProto, post.Value)
+
+	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.PostId)
+	select {
+	case post := <-postChan:
+		copier.Copy(&postProto, post)
+	case err := <-errChan:
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 
 	authClient := extensions.NewAuthClient(ctx)
 
@@ -156,33 +161,35 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 
 	// upload imageData to Azure bucket.
 	path := fmt.Sprintf("%s/%s/%d.%s", tenant, userId, time.Now().Unix(), mediaExtension)
-	res := <-azure.Storage.UploadStream("social-posts", path, imageData)
 
-	if res.Err != nil {
-		logger.Error("Failed uploading media image.", zap.Error(res.Err))
-		return res.Err
+	uploadPathChan, errChan := azure.Storage.UploadStream("social-posts", path, imageData)
+	select {
+	case uploadPath := <-uploadPathChan:
+		stream.SendAndClose(&pb.UploadPostMediaResponse{UploadPath: uploadPath})
+		return nil
+	case err := <-errChan:
+		logger.Error("Failed uploading media image.", zap.Error(err))
+		return status.Error(codes.Internal, err.Error())
 	}
-	stream.SendAndClose(&pb.UploadPostMediaResponse{UploadPath: res.Value.(string)})
-	return nil
 }
 
 func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequest) (*pb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
-	post := <-s.db.FeedPost(tenant).FindOneById(req.Id)
-	if post.Err != nil {
-		return nil, status.Error(codes.NotFound, post.Err.Error())
-	}
-
-	postEntity := post.Value.(*models.FeedPostModel)
-	if postEntity.UserId != userId {
-		return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
+	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.Id)
+	select {
+	case postEntity := <-postChan:
+		if postEntity.UserId != userId {
+			return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
+		}
+	case err := <-errChan:
+		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
 	err := <-s.db.FeedPost(tenant).DeleteById(req.Id)
 
 	if err != nil {
-		return nil, err
+		return nil, status.Error(codes.Internal, err.Error())
 	} else {
 		return &pb.SocialStatusResponse{
 			Status: "success",

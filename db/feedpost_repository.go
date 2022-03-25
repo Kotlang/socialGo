@@ -9,7 +9,7 @@ import (
 )
 
 type FeedPostRepository struct {
-	odm.AbstractRepository
+	odm.AbstractRepository[models.FeedPostModel]
 }
 
 func (r *FeedPostRepository) GetFeed(
@@ -38,12 +38,13 @@ func (r *FeedPostRepository) GetFeed(
 	}
 
 	skip := pageNumber * pageSize
-	res := <-r.Find(filters, sort, pageSize, skip)
+	resultChan, errChan := r.Find(filters, sort, pageSize, skip)
 
-	if res.Err != nil {
-		logger.Error("Failed getting feed", zap.Error(res.Err))
+	select {
+	case res := <-resultChan:
+		return res
+	case err := <-errChan:
+		logger.Error("Failed getting feed", zap.Error(err))
 		return []models.FeedPostModel{}
 	}
-
-	return res.Value.([]models.FeedPostModel)
 }

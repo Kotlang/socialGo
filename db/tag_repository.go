@@ -9,7 +9,7 @@ import (
 )
 
 type TagRepository struct {
-	odm.AbstractRepository
+	odm.AbstractRepository[models.PostTagModel]
 }
 
 func (r *TagRepository) GetTagsRanked() []models.PostTagModel {
@@ -17,10 +17,13 @@ func (r *TagRepository) GetTagsRanked() []models.PostTagModel {
 	sort := bson.D{
 		{"numPosts", -1},
 	}
-	res := <-r.Find(filters, sort, 10, 0)
-	if res.Err != nil {
-		logger.Error("Failed fetching tags", zap.Error(res.Err))
+	resultChan, errChan := r.Find(filters, sort, 10, 0)
+
+	select {
+	case res := <-resultChan:
+		return res
+	case err := <-errChan:
+		logger.Error("Failed getting tags", zap.Error(err))
 		return []models.PostTagModel{}
 	}
-	return res.Value.([]models.PostTagModel)
 }
