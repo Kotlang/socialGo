@@ -99,7 +99,7 @@ jobs:
           container-registry-password: ${{ secrets.DOCKERHUB_TOKEN }}
           secret-name: registry-credentials
 
-       - name: AKS Deploy
+      - name: AKS Deploy
         uses: azure/k8s-deploy@v1.4
         with:
           action: deploy
