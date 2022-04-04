@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: social-svc
-          image: kotlangauthsvc.azurecr.io/social-service:latest
+          image: sainageswar/kotlang-social:latest
           env:
             - name: MONGO_URI
               valueFrom:
