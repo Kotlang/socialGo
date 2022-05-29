@@ -18,36 +18,21 @@ spec:
         - name: social-svc
           image: sainageswar/kotlang-social:latest
           env:
-            - name: MONGO_URI
+            - name: AZURE_TENANT_ID
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: mongoUri
-            - name: ACCESS_SECRET
+                  name: azure-ad
+                  key: tenantId
+            - name: AZURE_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: accessSecret
-            - name: AWS_ACCESS_KEY_ID
+                  name: azure-ad
+                  key: clientId
+            - name: AZURE_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: app-secrets
-                  key: awsAccessKeyId
-            - name: AWS_SECRET_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: app-secrets
-                  key: awsSecretAccessKey
-            - name: AZURE_STORAGE_ACCOUNT
-              valueFrom:
-                secretKeyRef:
-                  name: azure-storage-secrets
-                  key: azureStorageAccount
-            - name: AZURE_STORAGE_ACCESS_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: azure-storage-secrets
-                  key: azureStorageAccessKey
+                  name: azure-ad
+                  key: clientSecret
           ports:
             - containerPort: 8081
               name: web

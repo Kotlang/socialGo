@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/service"
-	"github.com/joho/godotenv"
 )
 
 type Inject struct {
@@ -14,9 +13,7 @@ type Inject struct {
 }
 
 func NewInject() *Inject {
-	godotenv.Load()
 	inj := &Inject{}
-
 	inj.SocialDb = &db.SocialDb{}
 
 	inj.FeedPostService = service.NewFeedpostService(inj.SocialDb)
