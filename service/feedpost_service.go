@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/Kotlang/socialGo/db"
@@ -93,14 +94,9 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	}
 	logger.Info("Getting feed for ", zap.String("feedType", req.PostType.String()))
 
-	var tagFilter string
-	if req.Filters != nil {
-		tagFilter = req.Filters.Tag
-	}
-
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.PostType.String(),
-		tagFilter,
+		req.Filters,
 		"",
 		int64(req.PageNumber),
 		int64(req.PageSize))
@@ -160,7 +156,7 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 	}
 
 	// upload imageData to Azure bucket.
-	path := fmt.Sprintf("%s/%s/%d.%s", tenant, userId, time.Now().Unix(), mediaExtension)
+	path := fmt.Sprintf("%s/%s/%d-%d.%s", tenant, userId, time.Now().Unix(), rand.Int(), mediaExtension)
 
 	uploadPathChan, errChan := azure.Storage.UploadStream("social-posts", path, imageData)
 	select {

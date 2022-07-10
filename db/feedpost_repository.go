@@ -1,6 +1,7 @@
 package db
 
 import (
+	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/odm"
@@ -14,7 +15,7 @@ type FeedPostRepository struct {
 
 func (r *FeedPostRepository) GetFeed(
 	postType string,
-	tagFilter string,
+	feedFilters *pb.FeedFilters,
 	referencePost string,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
@@ -22,8 +23,12 @@ func (r *FeedPostRepository) GetFeed(
 		"postType": postType,
 	}
 
-	if len(tagFilter) > 0 {
-		filters["tags"] = tagFilter
+	if len(feedFilters.Tag) > 0 {
+		filters["tags"] = feedFilters.Tag
+	}
+
+	if len(feedFilters.UserId) > 0 {
+		filters["userId"] = feedFilters.UserId
 	}
 
 	if len(referencePost) > 0 {

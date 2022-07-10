@@ -57,7 +57,7 @@ func AttachPostUserInfoAsync(
 		if attachAnswers {
 			answers := socialDb.FeedPost(tenant).GetFeed(
 				pb.UserPostRequest_QnA_ANSWER.String(),
-				"",
+				&pb.FeedFilters{},
 				feedPost.PostId,
 				int64(0),
 				int64(10))
