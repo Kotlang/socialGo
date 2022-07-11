@@ -23,11 +23,11 @@ func (r *FeedPostRepository) GetFeed(
 		"postType": postType,
 	}
 
-	if len(feedFilters.Tag) > 0 {
+	if feedFilters != nil && len(feedFilters.Tag) > 0 {
 		filters["tags"] = feedFilters.Tag
 	}
 
-	if len(feedFilters.UserId) > 0 {
+	if feedFilters != nil && len(feedFilters.UserId) > 0 {
 		filters["userId"] = feedFilters.UserId
 	}
 
