@@ -59,9 +59,12 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		}
 	}
 
+	savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
+
 	// wait for async operations to finish.
 	<-savePostPromise
 	<-saveTagsPromise
+	<-savePostCountPromise
 
 	res := &pb.UserPostProto{}
 	copier.Copy(res, feedPostModel)

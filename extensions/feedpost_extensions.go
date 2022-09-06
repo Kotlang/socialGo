@@ -45,12 +45,13 @@ func AttachPostUserInfoAsync(
 			(&models.PostLikeModel{UserId: userId, PostId: feedPost.PostId}).Id(),
 		)
 		// get post author profile
-		authorProfile := authClient.GetAuthorProfile(feedPost.UserId)
+		authorProfile := <-authClient.GetAuthorProfile(feedPost.UserId)
 		if authorProfile != nil {
-			feedPost.AuthorInfo = &pb.AuthorInfo{
+			feedPost.AuthorInfo = &pb.UserProfile{
 				Name:       authorProfile.Name,
 				PhotoUrl:   authorProfile.PhotoUrl,
 				Occupation: "farmer",
+				UserId:     feedPost.UserId,
 			}
 		}
 
