@@ -2,55 +2,136 @@ package extensions
 
 import (
 	"context"
+	"sync"
 
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	"github.com/thoas/go-funk"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
 
+var auth_client *AuthClient = &AuthClient{}
+
 type AuthClient struct {
-	grpcContext context.Context
+	cached_conn        *grpc.ClientConn
+	conn_creation_lock sync.Mutex
 }
 
-func NewAuthClient(grpcContext context.Context) *AuthClient {
-	return &AuthClient{
-		grpcContext: grpcContext,
-	}
-}
+func (c *AuthClient) getConnection() *grpc.ClientConn {
+	c.conn_creation_lock.Lock()
+	defer c.conn_creation_lock.Unlock()
 
-func (c *AuthClient) GetAuthorProfile(userId string) chan *pb.UserProfileProto {
-	result := make(chan *pb.UserProfileProto)
-
-	go func() {
+	if c.cached_conn == nil || c.cached_conn.GetState().String() != "READY" {
 		conn, err := grpc.Dial("20.193.225.77:50051", grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			logger.Error("Failed getting connection with auth service", zap.Error(err))
-			result <- nil
+			return nil
 		}
-		defer conn.Close()
+
+		c.cached_conn = conn
+	}
+
+	return c.cached_conn
+}
+
+func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb.SocialProfile {
+	result := make(chan []*pb.SocialProfile)
+
+	go func() {
+		if len(userIds) == 0 {
+			result <- nil
+			return
+		}
+
+		// call auth service.
+		conn := auth_client.getConnection()
+		if conn == nil {
+			result <- nil
+			return
+		}
 
 		client := pb.NewProfileClient(conn)
 
-		jwtToken, err := grpc_auth.AuthFromMD(c.grpcContext, "bearer")
-		if err != nil {
-			logger.Error("Failed getting jwt token", zap.Error(err))
+		ctx := prepapreCallContext(grpcContext)
+		if ctx == nil {
 			result <- nil
+			return
 		}
 
-		ctx := metadata.AppendToOutgoingContext(context.Background(), "Authorization", "bearer "+jwtToken)
+		userIdList := &pb.BulkGetProfileRequest{
+			UserIds: userIds,
+		}
+
+		resp, err := client.BulkGetProfileByIds(ctx, userIdList)
+
+		if err != nil {
+			logger.Log.Error("error while getting author profiles", zap.Error(err))
+			result <- nil
+			return
+		}
+
+		authorProfiles := funk.Map(resp.Profiles, func(profile *pb.UserProfileProto) *pb.SocialProfile {
+			return &pb.SocialProfile{
+				Name:       profile.Name,
+				PhotoUrl:   profile.PhotoUrl,
+				Occupation: "farmer",
+				UserId:     profile.LoginId,
+			}
+		}).([]*pb.SocialProfile)
+
+		result <- authorProfiles
+	}()
+
+	return result
+}
+
+func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.SocialProfile {
+	result := make(chan *pb.SocialProfile)
+
+	go func() {
+		conn := auth_client.getConnection()
+		if conn == nil {
+			result <- nil
+			return
+		}
+
+		client := pb.NewProfileClient(conn)
+
+		ctx := prepapreCallContext(grpcContext)
+		if ctx == nil {
+			result <- nil
+			return
+		}
+
 		resp, err := client.GetProfileById(
 			ctx,
 			&pb.GetProfileRequest{UserId: userId})
 		if err != nil {
 			logger.Error("Failed getting user profile", zap.Error(err))
 			result <- nil
+			return
 		}
 
-		result <- resp
+		result <- &pb.SocialProfile{
+			Name:       resp.Name,
+			PhotoUrl:   resp.PhotoUrl,
+			Occupation: "farmer",
+			UserId:     resp.LoginId,
+		}
 	}()
 
 	return result
+}
+
+func prepapreCallContext(grpcContext context.Context) context.Context {
+	jwtToken, err := grpc_auth.AuthFromMD(grpcContext, "bearer")
+	if err != nil {
+		logger.Error("Failed getting jwt token", zap.Error(err))
+		return nil
+	}
+
+	return metadata.AppendToOutgoingContext(context.Background(), "Authorization", "bearer "+jwtToken)
 }

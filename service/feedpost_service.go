@@ -84,9 +84,7 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	authClient := extensions.NewAuthClient(ctx)
-
-	<-extensions.AttachPostUserInfoAsync(s.db, authClient, &postProto, userId, tenant, "default", true)
+	<-extensions.AttachPostUserInfoAsync(s.db, ctx, &postProto, userId, tenant, "default", true)
 	return &postProto, nil
 }
 
@@ -108,11 +106,10 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	copier.Copy(&feedProto, feed)
 
 	response := &pb.FeedResponse{Posts: feedProto}
-	authClient := extensions.NewAuthClient(ctx)
 
 	attachAnswers := (req.PostType == pb.GetFeedRequest_QnA_QUESTION)
 	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
-		return extensions.AttachPostUserInfoAsync(s.db, authClient, x, userId, tenant, "default", attachAnswers)
+		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default", attachAnswers)
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
 		<-promise

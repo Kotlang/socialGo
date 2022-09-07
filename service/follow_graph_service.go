@@ -8,7 +8,6 @@ import (
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/auth"
-	"github.com/thoas/go-funk"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -94,7 +93,7 @@ func (s *FollowGraphService) GetFollowers(ctx context.Context, req *pb.GetFollow
 	}
 
 	followerIds := s.db.FollowersList(tenant).GetFollowers(userId, int64(req.PageNumber), int64(req.PageSize))
-	followers := getUserProfiles(ctx, followerIds)
+	followers := <-extensions.GetSocialProfiles(ctx, followerIds)
 
 	return &pb.GetFollowersResponse{Followers: followers}, nil
 }
@@ -111,26 +110,7 @@ func (s *FollowGraphService) GetFollowing(ctx context.Context, req *pb.GetFollow
 	}
 
 	followingIds := s.db.FollowersList(tenant).GetFollowing(userId, int64(req.PageNumber), int64(req.PageSize))
-	following := getUserProfiles(ctx, followingIds)
+	following := <-extensions.GetSocialProfiles(ctx, followingIds)
 
 	return &pb.GetFollowingResponse{Following: following}, nil
-}
-
-func getUserProfiles(ctx context.Context, userIds []string) []*pb.UserProfile {
-	authClient := extensions.NewAuthClient(ctx)
-	profilePromises := funk.Map(userIds, func(userId string) chan *pb.UserProfileProto {
-		return authClient.GetAuthorProfile(userId)
-	}).([]chan *pb.UserProfileProto)
-
-	profiles := funk.Map(profilePromises, func(promise chan *pb.UserProfileProto) *pb.UserProfile {
-		profile := <-promise
-		return &pb.UserProfile{
-			Name:       profile.Name,
-			PhotoUrl:   profile.PhotoUrl,
-			Occupation: "farmer",
-			UserId:     profile.LoginId,
-		}
-	}).([]*pb.UserProfile)
-
-	return profiles
 }

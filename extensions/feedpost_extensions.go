@@ -1,6 +1,8 @@
 package extensions
 
 import (
+	"context"
+
 	"github.com/Kotlang/socialGo/db"
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
@@ -35,7 +37,7 @@ func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 // Adds additional userProfile data, comments/answers to feedPost parameter.
 func AttachPostUserInfoAsync(
 	socialDb *db.SocialDb,
-	authClient *AuthClient,
+	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
 	userId, tenant, userType string, attachAnswers bool) chan bool {
 	done := make(chan bool)
@@ -44,16 +46,10 @@ func AttachPostUserInfoAsync(
 		feedPost.HasFeedUserLiked = socialDb.PostLike(tenant).IsExistsById(
 			(&models.PostLikeModel{UserId: userId, PostId: feedPost.PostId}).Id(),
 		)
+
 		// get post author profile
-		authorProfile := <-authClient.GetAuthorProfile(feedPost.UserId)
-		if authorProfile != nil {
-			feedPost.AuthorInfo = &pb.UserProfile{
-				Name:       authorProfile.Name,
-				PhotoUrl:   authorProfile.PhotoUrl,
-				Occupation: "farmer",
-				UserId:     feedPost.UserId,
-			}
-		}
+		authorProfile := <-GetSocialProfile(grpcContext, feedPost.UserId)
+		feedPost.AuthorInfo = authorProfile
 
 		if attachAnswers {
 			answers := socialDb.FeedPost(tenant).GetFeed(
@@ -68,7 +64,7 @@ func AttachPostUserInfoAsync(
 
 			// recursively attach authorInfo to answers.
 			for _, answerProto := range feedPost.AnswersThread {
-				<-AttachPostUserInfoAsync(socialDb, authClient, answerProto, userId, tenant, userType, false)
+				<-AttachPostUserInfoAsync(socialDb, grpcContext, answerProto, userId, tenant, userType, false)
 			}
 		}
 
