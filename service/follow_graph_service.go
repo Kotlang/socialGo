@@ -114,3 +114,15 @@ func (s *FollowGraphService) GetFollowing(ctx context.Context, req *pb.GetFollow
 
 	return &pb.GetFollowingResponse{Following: following}, nil
 }
+
+func (s *FollowGraphService) IsFollowing(ctx context.Context, req *pb.IsFollowingRequest) (*pb.IsFollowingResponse, error) {
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+
+	followerModel := &models.FollowersListModel{
+		UserId:     req.UserId1,
+		FollowerId: req.UserId2,
+	}
+
+	isExists := s.db.FollowersList(tenant).IsExistsById(followerModel.Id())
+	return &pb.IsFollowingResponse{IsFollowing: isExists}, nil
+}
