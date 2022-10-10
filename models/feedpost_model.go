@@ -23,6 +23,7 @@ type FeedPostModel struct {
 	NumReplies    int        `bson:"numReplies"`
 	Tags          []string   `bson:"tags"`
 	CreatedOn     int64      `bson:"createdOn"`
+	Language      string     `bson:"language"`
 }
 
 func (m *FeedPostModel) Id() string {

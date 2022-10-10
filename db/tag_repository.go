@@ -12,10 +12,10 @@ type TagRepository struct {
 	odm.AbstractRepository[models.PostTagModel]
 }
 
-func (r *TagRepository) GetTagsRanked() []models.PostTagModel {
-	filters := bson.M{}
+func (r *TagRepository) FindByLanguage(language string) []models.PostTagModel {
+	filters := bson.M{"language": language}
 	sort := bson.D{
-		{"numPosts", -1},
+		{Key: "numPosts", Value: -1},
 	}
 	resultChan, errChan := r.Find(filters, sort, 10, 0)
 
