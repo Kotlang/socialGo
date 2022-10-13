@@ -9,7 +9,7 @@ import (
 	"github.com/jinzhu/copier"
 )
 
-func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
+func SaveTags(db *db.SocialDb, tenant, language string, tags []string) chan bool {
 	savedTagsPromise := make(chan bool)
 
 	go func() {
@@ -21,6 +21,7 @@ func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 				<-db.Tag(tenant).Save(existingTag)
 			case <-errChan:
 				newTag := &models.PostTagModel{
+					Language: language,
 					Tag:      tag,
 					NumPosts: 1,
 				}

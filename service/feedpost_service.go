@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/Kotlang/socialGo/db"
@@ -41,11 +42,15 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	feedPostModel.UserId = userId
 	feedPostModel.PostType = pb.UserPostRequest_PostType_name[int32(req.PostType)]
 
+	if len(strings.TrimSpace(feedPostModel.Language)) == 0 {
+		feedPostModel.Language = "english"
+	}
+
 	// save post.
 	savePostPromise := s.db.FeedPost(tenant).Save(feedPostModel)
 
 	// save tags.
-	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
+	saveTagsPromise := extensions.SaveTags(s.db, tenant, feedPostModel.Language, req.Tags)
 
 	// if it is a comment/answer increment numReplies
 	if len(feedPostModel.ReferencePost) > 0 {
@@ -120,7 +125,13 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 
 func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (*pb.TagListResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
-	tags := s.db.Tag(tenant).GetTagsRanked()
+
+	language := req.Language
+	if len(strings.TrimSpace(language)) == 0 {
+		language = "english"
+	}
+
+	tags := s.db.Tag(tenant).FindByLanguage(language)
 
 	return &pb.TagListResponse{
 		Tag: funk.Map(tags, func(x models.PostTagModel) string { return x.Tag }).([]string),
