@@ -28,7 +28,7 @@ type FeedPostModel struct {
 
 func (m *FeedPostModel) Id() string {
 	if len(m.PostId) == 0 {
-		return uuid.NewString()
+		m.PostId = uuid.NewString()
 	}
 	return m.PostId
 }
