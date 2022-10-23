@@ -71,10 +71,16 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	<-saveTagsPromise
 	<-savePostCountPromise
 
-	res := &pb.UserPostProto{}
-	copier.Copy(res, feedPostModel)
+	feedPostModelChan, errChan := s.db.FeedPost(tenant).FindOneById(feedPostModel.PostId)
 
-	return res, nil
+	select {
+	case feedPostModel := <-feedPostModelChan:
+		res := &pb.UserPostProto{}
+		copier.Copy(res, feedPostModel)
+		return res, nil
+	case err := <-errChan:
+		return nil, status.Error(codes.Internal, err.Error())
+	}
 }
 
 func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.UserPostProto, error) {
