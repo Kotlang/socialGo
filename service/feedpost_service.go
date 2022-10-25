@@ -203,3 +203,10 @@ func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequ
 		}, nil
 	}
 }
+
+func (s *FeedpostService) ParsePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostRequest, error) {
+	links := <-extensions.GetLinks(req.Post)
+
+	mediaUrlsChan, webPreviewsChan := extensions.GeneratePreviews(links)
+	return &pb.UserPostRequest{MediaUrls: <-mediaUrlsChan, WebPreviews: <-webPreviewsChan}, nil
+}
