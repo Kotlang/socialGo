@@ -208,5 +208,18 @@ func (s *FeedpostService) ParsePost(ctx context.Context, req *pb.UserPostRequest
 	links := <-extensions.GetLinks(req.Post)
 
 	mediaUrlsChan, webPreviewsChan := extensions.GeneratePreviews(links)
-	return &pb.UserPostRequest{MediaUrls: <-mediaUrlsChan, WebPreviews: <-webPreviewsChan}, nil
+
+	newMediaUrls := <-mediaUrlsChan
+	newMediaUrls = append(newMediaUrls, req.MediaUrls...)
+
+	m := make(map[string]*pb.MediaUrl)
+	for _, mediaUrl := range newMediaUrls {
+		m[mediaUrl.Url] = mediaUrl
+	}
+
+	result := make([]*pb.MediaUrl, 0)
+	for _, v := range m {
+		result = append(result, v)
+	}
+	return &pb.UserPostRequest{MediaUrls: result, WebPreviews: <-webPreviewsChan}, nil
 }
