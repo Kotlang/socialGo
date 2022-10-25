@@ -87,12 +87,15 @@ type Regex struct {
 
 var rg *Regex
 
+const linksExpr string = `(https?:\/\/[^\s]+)`
+const youtubeExpr string = `^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*`
+
 func GetLinks(content string) chan []string {
 	linksChan := make(chan []string)
 	if rg == nil {
 		rg = &Regex{}
-		rg.Links, _ = regexp.Compile(`(https?:\/\/[^\s]+)`)
-		rg.Youtube, _ = regexp.Compile(`^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*`)
+		rg.Links, _ = regexp.Compile(linksExpr)
+		rg.Youtube, _ = regexp.Compile(youtubeExpr)
 	}
 	go func() {
 		linksChan <- rg.Links.FindAllString(content, -1)
