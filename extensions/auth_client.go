@@ -25,7 +25,7 @@ func (c *AuthClient) getConnection() *grpc.ClientConn {
 	defer c.conn_creation_lock.Unlock()
 
 	if c.cached_conn == nil || c.cached_conn.GetState().String() != "READY" {
-		conn, err := grpc.Dial("20.193.225.77:50051", grpc.WithInsecure(), grpc.WithBlock())
+		conn, err := grpc.Dial("146.190.10.103:50051", grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			logger.Error("Failed getting connection with auth service", zap.Error(err))
 			return nil
