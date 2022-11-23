@@ -8,6 +8,7 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/jinzhu/copier v0.3.2
+	github.com/joho/godotenv v1.4.0
 	github.com/thoas/go-funk v0.8.0
 	go.mongodb.org/mongo-driver v1.7.2
 	go.uber.org/zap v1.17.0
@@ -35,7 +36,6 @@ require (
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/improbable-eng/grpc-web v0.14.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/klauspost/compress v1.10.3 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
 	github.com/mattn/go-ieproxy v0.0.1 // indirect
