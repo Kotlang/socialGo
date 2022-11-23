@@ -26,14 +26,17 @@ func (c *AuthClient) getConnection() *grpc.ClientConn {
 	defer c.conn_creation_lock.Unlock()
 
 	if c.cached_conn == nil || c.cached_conn.GetState().String() != "READY" {
-		authServiceUrl := os.Getenv("AUTH_SERVICE_URL")
-		conn, err := grpc.Dial(authServiceUrl, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			logger.Error("Failed getting connection with auth service", zap.Error(err))
-			return nil
+		if val, ok := os.LookupEnv("AUTH_TARGET"); ok {
+			conn, err := grpc.Dial(val, grpc.WithInsecure(), grpc.WithBlock())
+			if err != nil {
+				logger.Error("Failed getting connection with auth service", zap.Error(err))
+				return nil
+			}
+			c.cached_conn = conn
+		} else {
+			logger.Error("Failed to get AUTH_TARGET env variable")
 		}
 
-		c.cached_conn = conn
 	}
 
 	return c.cached_conn
