@@ -4,11 +4,21 @@ import (
 	"os"
 
 	pb "github.com/Kotlang/socialGo/generated"
+	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/server"
+	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 var grpcPort = ":50051"
 var webPort = ":8081"
+
+func init() {
+	err := godotenv.Load()
+	if err != nil {
+		logger.Error("Error loading .env file", zap.Error(err))
+	}
+}
 
 func main() {
 	// go-api-boot picks up keyvault name from environment variable.
