@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"context"
+	"os"
 	"sync"
 
 	pb "github.com/Kotlang/socialGo/generated"
@@ -25,7 +26,8 @@ func (c *AuthClient) getConnection() *grpc.ClientConn {
 	defer c.conn_creation_lock.Unlock()
 
 	if c.cached_conn == nil || c.cached_conn.GetState().String() != "READY" {
-		conn, err := grpc.Dial("146.190.10.103:50051", grpc.WithInsecure(), grpc.WithBlock())
+		authServiceUrl := os.Getenv("AUTH_SERVICE_URL")
+		conn, err := grpc.Dial(authServiceUrl, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			logger.Error("Failed getting connection with auth service", zap.Error(err))
 			return nil
