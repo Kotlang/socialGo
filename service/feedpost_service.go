@@ -35,6 +35,11 @@ func NewFeedpostService(db *db.SocialDb) *FeedpostService {
 }
 
 func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostProto, error) {
+	err := ValidateUserPostRequest(req)
+	if err != nil {
+		return nil, err
+	}
+
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	// map proto to model.
@@ -156,22 +161,30 @@ func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUp
 func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServer) error {
 	userId, tenant := auth.GetUserIdAndTenant(stream.Context())
 	logger.Info("Uploading post media", zap.String("userId", userId), zap.String("tenant", tenant))
-	mediaExtension := "jpg"
 
-	imageData, err := bootUtils.BufferGrpcServerStream(stream, func() ([]byte, error) {
-		req, err := stream.Recv()
-		if err != nil {
-			return nil, err
-		}
+	allowedMimeTypes := []string{"image/jpeg", "image/png", "video/avi", "video/mp4", "video/webm"}
+	imageData, contentType, err := bootUtils.BufferGrpcServerStream(
+		allowedMimeTypes,
+		50*1024*1024, // 50mb max size limit.
+		func() ([]byte, error) {
+			err := bootUtils.StreamContextError(stream.Context())
+			if err != nil {
+				return nil, err
+			}
 
-		mediaExtension = req.MediaExtension
-		return req.ChunkData, nil
-	})
+			req, err := stream.Recv()
+			if err != nil {
+				return nil, err
+			}
+
+			return req.ChunkData, nil
+		})
 	if err != nil {
 		logger.Error("Failed uploading image", zap.Error(err))
 		return err
 	}
 
+	mediaExtension := bootUtils.GetFileExtension(contentType)
 	// upload imageData to Azure bucket.
 	path := fmt.Sprintf("%s/%s/%d-%d.%s", tenant, userId, time.Now().Unix(), rand.Int(), mediaExtension)
 

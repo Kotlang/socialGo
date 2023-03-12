@@ -3,7 +3,7 @@ module github.com/Kotlang/socialGo
 go 1.19
 
 require (
-	github.com/SaiNageswarS/go-api-boot v0.1.21
+	github.com/SaiNageswarS/go-api-boot v0.1.25
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/google/uuid v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
@@ -54,6 +54,7 @@ require (
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/crypto v0.0.0-20220511200225-c6db032c6c88 // indirect
+	golang.org/x/exp v0.0.0-20230310171629-522b1b587ee0 // indirect
 	golang.org/x/sync v0.0.0-20201207232520-09787c993a3a // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
