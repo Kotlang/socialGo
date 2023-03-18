@@ -51,3 +51,12 @@ func (db *SocialDb) SocialStats(tenant string) *SocialStatsRepository {
 
 	return &SocialStatsRepository{repo}
 }
+
+func (a *SocialDb) ContentMaster(tenant string) *ContentMasterRepository {
+	baseRepo := odm.AbstractRepository[models.ContentMasterModel]{
+		Database:       tenant + "_auth",
+		CollectionName: "content_master",
+	}
+
+	return &ContentMasterRepository{baseRepo}
+}
