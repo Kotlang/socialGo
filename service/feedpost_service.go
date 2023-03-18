@@ -10,7 +10,6 @@ import (
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
 	pb "github.com/Kotlang/socialGo/generated"
-	"github.com/Kotlang/socialGo/models"
 	s3client "github.com/Kotlang/socialGo/s3Client"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/azure"
@@ -144,9 +143,10 @@ func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (
 
 	tags := s.db.Tag(tenant).FindByLanguage(language)
 
-	return &pb.TagListResponse{
-		Tag: funk.Map(tags, func(x models.PostTagModel) string { return x.Tag }).([]string),
-	}, nil
+	res := &pb.TagListResponse{}
+	copier.Copy(&res.Tags, tags)
+
+	return res, nil
 }
 
 func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUploadRequest) (*pb.MediaUploadURL, error) {
