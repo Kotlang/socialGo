@@ -114,15 +114,14 @@ func GeneratePreviews(urls []string) (chan []*pb.MediaUrl, chan []*pb.WebPreview
 		for _, url := range urls {
 			if subMatch := rg.Youtube.FindStringSubmatch(url); len(subMatch) > 1 {
 				mediaUrls = append(mediaUrls, &pb.MediaUrl{Url: subMatch[1], MimeType: "video/x-youtube"})
-			} else {
-				wg.Add(1)
-				go func(url string) {
-					defer wg.Done()
-					mut.Lock()
-					webPreviews = append(webPreviews, generateWebPreview(url))
-					mut.Unlock()
-				}(url)
 			}
+			wg.Add(1)
+			go func(url string) {
+				defer wg.Done()
+				mut.Lock()
+				webPreviews = append(webPreviews, generateWebPreview(url))
+				mut.Unlock()
+			}(url)
 		}
 		wg.Wait()
 		mediaUrlsChan <- mediaUrls
