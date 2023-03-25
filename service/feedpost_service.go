@@ -226,19 +226,16 @@ func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequ
 func (s *FeedpostService) ParsePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostRequest, error) {
 	links := <-extensions.GetLinks(req.Post)
 
+	links = append(links, funk.Map(req.MediaUrls, func(x *pb.MediaUrl) string { return x.Url }).([]string)...)
+	links = funk.UniqString(links)
 	mediaUrlsChan, webPreviewsChan := extensions.GeneratePreviews(links)
 
-	newMediaUrls := <-mediaUrlsChan
-	newMediaUrls = append(newMediaUrls, req.MediaUrls...)
-
-	m := make(map[string]*pb.MediaUrl)
-	for _, mediaUrl := range newMediaUrls {
-		m[mediaUrl.Url] = mediaUrl
-	}
-
-	result := make([]*pb.MediaUrl, 0)
-	for _, v := range m {
-		result = append(result, v)
-	}
-	return &pb.UserPostRequest{MediaUrls: result, WebPreviews: <-webPreviewsChan}, nil
+	mediaUrls := <-mediaUrlsChan
+	newUserPost := &pb.UserPostRequest{}
+	copier.CopyWithOption(newUserPost, req, copier.Option{
+		DeepCopy: true,
+	})
+	newUserPost.MediaUrls = mediaUrls
+	newUserPost.WebPreviews = <-webPreviewsChan
+	return newUserPost, nil
 }
