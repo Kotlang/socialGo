@@ -54,7 +54,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	savePostPromise := s.db.FeedPost(tenant).Save(feedPostModel)
 
 	// save tags.
-	saveTagsPromise := extensions.SaveTags(s.db, tenant, feedPostModel.Language, req.Tags)
+	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
 
 	// if it is a comment/answer increment numReplies
 	if len(feedPostModel.ReferencePost) > 0 {
@@ -104,6 +104,7 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (
 }
 
 func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.FeedResponse, error) {
+	// logger.Info("GetFeed", zap.Any("req", req))
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
 		req.PageSize = 10
@@ -136,12 +137,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (*pb.TagListResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
-	language := req.Language
-	if len(strings.TrimSpace(language)) == 0 {
-		language = "english"
-	}
-
-	tags := s.db.Tag(tenant).FindByLanguage(language)
+	tags := s.db.Tag(tenant).FindTagsRanked()
 
 	res := &pb.TagListResponse{}
 	copier.Copy(&res.Tags, tags)

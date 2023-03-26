@@ -53,6 +53,8 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 
 		// call auth service.
 		conn := auth_client.getConnection()
+		// logger.Info("auth connection state", zap.String("state", conn.GetState().String()))
+
 		if conn == nil {
 			result <- nil
 			return

@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-func SaveTags(db *db.SocialDb, tenant, language string, tags []string) chan bool {
+func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 	savedTagsPromise := make(chan bool)
 
 	go func() {
@@ -26,7 +26,6 @@ func SaveTags(db *db.SocialDb, tenant, language string, tags []string) chan bool
 				<-db.Tag(tenant).Save(existingTag)
 			case <-errChan:
 				newTag := &models.PostTagModel{
-					Language: language,
 					Tag:      tag,
 					NumPosts: 1,
 				}
@@ -46,6 +45,9 @@ func AttachPostUserInfoAsync(
 	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
 	userId, tenant, userType string, attachAnswers bool) chan bool {
+
+	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedPost", feedPost))
+
 	done := make(chan bool)
 
 	go func() {

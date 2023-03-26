@@ -1,7 +1,6 @@
 package models
 
 type PostTagModel struct {
-	Language       string `bson:"language"`
 	Tag            string `bson:"tag"`
 	TagDescription string `bson:"tagDescription"`
 	NumPosts       int    `bson:"numPosts"`
