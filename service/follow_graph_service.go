@@ -119,8 +119,8 @@ func (s *FollowGraphService) IsFollowing(ctx context.Context, req *pb.IsFollowin
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
 	followerModel := &models.FollowersListModel{
-		UserId:     req.UserId1,
-		FollowerId: req.UserId2,
+		UserId:     req.Followee,
+		FollowerId: req.Follower,
 	}
 
 	isExists := s.db.FollowersList(tenant).IsExistsById(followerModel.Id())
