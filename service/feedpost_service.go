@@ -81,6 +81,20 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	case feedPostModel := <-feedPostModelChan:
 		res := &pb.UserPostProto{}
 		copier.Copy(res, feedPostModel)
+
+		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
+			EventType: "post_created",
+			TemplateParameters: map[string]string{
+				"postId":    feedPostModel.PostId,
+				"post":      feedPostModel.Post,
+				"postTitle": feedPostModel.Title,
+			},
+			IsBroadcast: true,
+			TargetUsers: []string{userId},
+		})
+		if err != nil {
+			logger.Error("Failed to register event", zap.Error(err))
+		}
 		return res, nil
 	case err := <-errChan:
 		return nil, status.Error(codes.Internal, err.Error())
