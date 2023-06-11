@@ -83,13 +83,13 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		copier.Copy(res, feedPostModel)
 
 		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
-			EventType: "post_created",
+			EventType: "post.created",
 			TemplateParameters: map[string]string{
-				"postId":    feedPostModel.PostId,
-				"post":      feedPostModel.Post,
-				"postTitle": feedPostModel.Title,
+				"postId": feedPostModel.PostId,
+				"body":   feedPostModel.Post,
+				"title":  feedPostModel.Title,
 			},
-			IsBroadcast: true,
+			Topic:       fmt.Sprintf("%s.post.created", tenant),
 			TargetUsers: []string{userId},
 		})
 		if err != nil {
