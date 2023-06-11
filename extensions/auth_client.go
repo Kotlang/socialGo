@@ -62,7 +62,7 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 
 		client := pb.NewProfileClient(conn)
 
-		ctx := prepapreCallContext(grpcContext)
+		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
 			result <- nil
 			return
@@ -107,7 +107,7 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.Socia
 
 		client := pb.NewProfileClient(conn)
 
-		ctx := prepapreCallContext(grpcContext)
+		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
 			result <- nil
 			return
@@ -133,7 +133,7 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.Socia
 	return result
 }
 
-func prepapreCallContext(grpcContext context.Context) context.Context {
+func prepareCallContext(grpcContext context.Context) context.Context {
 	jwtToken, err := grpc_auth.AuthFromMD(grpcContext, "bearer")
 	if err != nil {
 		logger.Error("Failed getting jwt token", zap.Error(err))
