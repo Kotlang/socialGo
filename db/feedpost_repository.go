@@ -31,9 +31,8 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.UserId
 	}
 
-	if len(referencePost) > 0 {
-		filters["referencePost"] = referencePost
-	}
+	// if reference post is empty, get only feed post and not comments/answers.
+	filters["referencePost"] = referencePost
 
 	sort := bson.D{
 		{"createdOn", -1},
