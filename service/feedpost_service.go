@@ -82,6 +82,8 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		res := &pb.UserPostProto{}
 		copier.Copy(res, feedPostModel)
 
+		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default", false)
+
 		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
 			EventType: "post.created",
 			TemplateParameters: map[string]string{
@@ -95,6 +97,8 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		if err != nil {
 			logger.Error("Failed to register event", zap.Error(err))
 		}
+
+		<-attachAuthorInfoPromise
 		return res, nil
 	case err := <-errChan:
 		return nil, status.Error(codes.Internal, err.Error())
@@ -128,7 +132,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.PostType.String(),
 		req.Filters,
-		"",
+		req.ReferencePost,
 		int64(req.PageNumber),
 		int64(req.PageSize))
 
