@@ -44,7 +44,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	// map proto to model.
 	feedPostModel := s.db.FeedPost(tenant).GetModel(req)
 	feedPostModel.UserId = userId
-	feedPostModel.PostType = pb.UserPostRequest_PostType_name[int32(req.PostType)]
+	feedPostModel.PostType = req.PostType.String()
 
 	if len(strings.TrimSpace(feedPostModel.Language)) == 0 {
 		feedPostModel.Language = "english"
@@ -127,10 +127,9 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	if req.PageSize == 0 {
 		req.PageSize = 10
 	}
-	logger.Info("Getting feed for ", zap.String("feedType", req.PostType.String()))
+	logger.Info("Getting feed for ", zap.String("feedType", req.Filters.PostType.String()))
 
 	feed := s.db.FeedPost(tenant).GetFeed(
-		req.PostType.String(),
 		req.Filters,
 		req.ReferencePost,
 		int64(req.PageNumber),
@@ -141,7 +140,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 
 	response := &pb.FeedResponse{Posts: feedProto}
 
-	attachAnswers := (req.PostType == pb.GetFeedRequest_QnA_QUESTION)
+	attachAnswers := (req.Filters.PostType == pb.PostType_QnA_QUESTION)
 	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
 		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default", attachAnswers)
 	}).([]chan bool)

@@ -14,13 +14,14 @@ type FeedPostRepository struct {
 }
 
 func (r *FeedPostRepository) GetFeed(
-	postType string,
 	feedFilters *pb.FeedFilters,
 	referencePost string,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
-	filters := bson.M{
-		"postType": postType,
+	filters := bson.M{}
+
+	if feedFilters != nil {
+		filters["postType"] = feedFilters.PostType.String()
 	}
 
 	if feedFilters != nil && len(feedFilters.Tag) > 0 {
@@ -31,7 +32,7 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.UserId
 	}
 
-	// if reference post is empty, get only feed post and not comments/answers.
+	// parent post referencePost field is always empty string in db.
 	filters["referencePost"] = referencePost
 
 	sort := bson.D{

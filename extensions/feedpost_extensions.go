@@ -44,7 +44,8 @@ func AttachPostUserInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
-	userId, tenant, userType string, attachAnswers bool) chan bool {
+	userId, tenant, userType string,
+	attachAnswers bool) chan bool {
 
 	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedPost", feedPost))
 
@@ -61,8 +62,7 @@ func AttachPostUserInfoAsync(
 
 		if attachAnswers {
 			answers := socialDb.FeedPost(tenant).GetFeed(
-				pb.UserPostRequest_QnA_ANSWER.String(),
-				&pb.FeedFilters{},
+				nil, // since we filter by parent PostId, we don't need to filter by postType.
 				feedPost.PostId,
 				int64(0),
 				int64(10))
