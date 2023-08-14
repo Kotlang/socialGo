@@ -1,8 +1,8 @@
 package models
 
 import (
+	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/google/uuid"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type MediaUrl struct {
@@ -17,35 +17,23 @@ type WebPreview struct {
 	Description  string `bson:"description"`
 }
 
-type SocialEventMetadata struct {
-	Name         string                 `bson:"name"`
-	Type         string                 `bson:"type"`
-	Schedule     *timestamppb.Timestamp `bson:"schedule"`
-	Description  string                 `bson:"description"`
-	NumAttendees int                    `bson:"numAttendees"`
-	NumSlots     int                    `bson:"numSlots"`
-	Location     string                 `bson:"location"`
-	DurationMins int                    `bson:"durationMins"`
-	OnlineLink   string                 `bson:"onlineLink"`
-}
-
 type FeedPostModel struct {
-	PostId              string              `bson:"_id"`
-	Title               string              `bson:"title"`
-	Post                string              `bson:"post"`
-	MediaUrls           []MediaUrl          `bson:"mediaUrls"`
-	WebPreviews         []WebPreview        `bson:"webPreviews"`
-	ReferencePost       string              `bson:"referencePost"`
-	Replies             []string            `bson:"replies"`
-	PostType            string              `bson:"postType"`
-	UserId              string              `bson:"userId"`
-	NumLikes            int                 `bson:"numLikes"`
-	NumShares           int                 `bson:"numShares"`
-	NumReplies          int                 `bson:"numReplies"`
-	Tags                []string            `bson:"tags"`
-	CreatedOn           int64               `bson:"createdOn"`
-	Language            string              `bson:"language"`
-	SocialEventMetadata SocialEventMetadata `bson:"socialEventMetadata"`
+	PostId              string                 `bson:"_id"`
+	Title               string                 `bson:"title"`
+	Post                string                 `bson:"post"`
+	MediaUrls           []MediaUrl             `bson:"mediaUrls"`
+	WebPreviews         []WebPreview           `bson:"webPreviews"`
+	ReferencePost       string                 `bson:"referencePost"`
+	Replies             []string               `bson:"replies"`
+	PostType            string                 `bson:"postType"`
+	UserId              string                 `bson:"userId"`
+	NumLikes            int                    `bson:"numLikes"`
+	NumShares           int                    `bson:"numShares"`
+	NumReplies          int                    `bson:"numReplies"`
+	Tags                []string               `bson:"tags"`
+	CreatedOn           int64                  `bson:"createdOn"`
+	Language            string                 `bson:"language"`
+	SocialEventMetadata pb.SocialEventMetadata `bson:"socialEventMetadata"`
 }
 
 func (m *FeedPostModel) Id() string {
