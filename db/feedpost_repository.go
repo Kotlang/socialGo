@@ -1,6 +1,8 @@
 package db
 
 import (
+	"time"
+
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
@@ -35,11 +37,24 @@ func (r *FeedPostRepository) GetFeed(
 	// parent post referencePost field is always empty string in db.
 	filters["referencePost"] = referencePost
 
+	if feedFilters != nil {
+		now := time.Now().Unix()
+
+		if pb.EventStatus_PAST == feedFilters.EventStatus {
+			filters["socialEventMetadata.endat"] = bson.M{"$lt": now}
+		} else if pb.EventStatus_ONGOING == feedFilters.EventStatus {
+			filters["socialEventMetadata.startat"] = bson.M{"$lt": now}
+			filters["socialEventMetadata.endat"] = bson.M{"$gt": now}
+		} else if pb.EventStatus_FUTURE == feedFilters.EventStatus {
+			filters["socialEventMetadata.startat"] = bson.M{"$gt": now}
+		}
+	}
+
 	sort := bson.D{
-		{"createdOn", -1},
-		{"numShares", -1},
-		{"numReplies", -1},
-		{"numLikes", -1},
+		{Key: "createdOn", Value: -1},
+		{Key: "numShares", Value: -1},
+		{Key: "numReplies", Value: -1},
+		{Key: "numLikes", Value: -1},
 	}
 
 	skip := pageNumber * pageSize
