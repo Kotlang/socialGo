@@ -3,13 +3,14 @@ module github.com/Kotlang/socialGo
 go 1.19
 
 require (
-	github.com/SaiNageswarS/go-api-boot v0.1.28
+	github.com/SaiNageswarS/go-api-boot v0.1.34
 	github.com/aws/aws-sdk-go v1.34.28
 	github.com/google/uuid v1.3.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/jinzhu/copier v0.3.2
 	github.com/joho/godotenv v1.4.0
-	github.com/thoas/go-funk v0.8.0
+	github.com/rs/cors v1.9.0
+	github.com/thoas/go-funk v0.9.3
 	go.mongodb.org/mongo-driver v1.11.3
 	go.uber.org/zap v1.17.0
 	golang.org/x/net v0.7.0
@@ -46,7 +47,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
-	github.com/rs/cors v1.7.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.1 // indirect
 	github.com/xdg-go/stringprep v1.0.3 // indirect
@@ -58,6 +58,6 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
-	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )

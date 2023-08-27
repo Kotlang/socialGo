@@ -7,6 +7,7 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/server"
 	"github.com/joho/godotenv"
+	"github.com/rs/cors"
 	"go.uber.org/zap"
 )
 
@@ -26,7 +27,11 @@ func main() {
 	server.LoadSecretsIntoEnv(true)
 	inject := NewInject()
 
-	bootServer := server.NewGoApiBoot()
+	corsConfig := cors.New(
+		cors.Options{
+			AllowedHeaders: []string{"*"},
+		})
+	bootServer := server.NewGoApiBoot(corsConfig)
 	pb.RegisterUserPostServer(bootServer.GrpcServer, inject.FeedPostService)
 	pb.RegisterPostActionsServer(bootServer.GrpcServer, inject.PostActionsService)
 	pb.RegisterFollowGraphServer(bootServer.GrpcServer, inject.FollowGraphService)
