@@ -15,6 +15,51 @@ type FeedPostRepository struct {
 	odm.AbstractRepository[models.FeedPostModel]
 }
 
+func (r *FeedPostRepository) GetEventFeed(
+	eventStatus pb.EventStatus,
+	postIds []string,
+	referencePost string,
+	pageNumber, pageSize int64) []models.FeedPostModel {
+
+	now := time.Now().Unix()
+	filters := bson.M{}
+	filters["postType"] = pb.PostType_SOCIAL_EVENT.String()
+
+	if len(postIds) > 0 {
+		filters["_id"] = bson.M{"$in": postIds}
+	}
+
+	// parent post referencePost field is always empty string in db.
+	filters["referencePost"] = referencePost
+
+	if pb.EventStatus_PAST == eventStatus {
+		filters["socialEventMetadata.endat"] = bson.M{"$lt": now}
+	} else if pb.EventStatus_ONGOING == eventStatus {
+		filters["socialEventMetadata.startat"] = bson.M{"$lt": now}
+		filters["socialEventMetadata.endat"] = bson.M{"$gt": now}
+	} else if pb.EventStatus_FUTURE == eventStatus {
+		filters["socialEventMetadata.startat"] = bson.M{"$gt": now}
+	}
+
+	sort := bson.D{
+		{Key: "createdOn", Value: -1},
+		{Key: "numShares", Value: -1},
+		{Key: "numReplies", Value: -1},
+		{Key: "numLikes", Value: -1},
+	}
+
+	skip := pageNumber * pageSize
+	resultChan, errChan := r.Find(filters, sort, pageSize, skip)
+
+	select {
+	case res := <-resultChan:
+		return res
+	case err := <-errChan:
+		logger.Error("Failed getting feed", zap.Error(err))
+		return []models.FeedPostModel{}
+	}
+}
+
 func (r *FeedPostRepository) GetFeed(
 	feedFilters *pb.FeedFilters,
 	referencePost string,
@@ -36,19 +81,6 @@ func (r *FeedPostRepository) GetFeed(
 
 	// parent post referencePost field is always empty string in db.
 	filters["referencePost"] = referencePost
-
-	if feedFilters != nil {
-		now := time.Now().Unix()
-
-		if pb.EventStatus_PAST == feedFilters.EventStatus {
-			filters["socialEventMetadata.endat"] = bson.M{"$lt": now}
-		} else if pb.EventStatus_ONGOING == feedFilters.EventStatus {
-			filters["socialEventMetadata.startat"] = bson.M{"$lt": now}
-			filters["socialEventMetadata.endat"] = bson.M{"$gt": now}
-		} else if pb.EventStatus_FUTURE == feedFilters.EventStatus {
-			filters["socialEventMetadata.startat"] = bson.M{"$gt": now}
-		}
-	}
 
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
