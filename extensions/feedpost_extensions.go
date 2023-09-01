@@ -10,9 +10,50 @@ import (
 	"github.com/Kotlang/socialGo/db"
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
+	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.uber.org/zap"
 	"golang.org/x/net/html"
 )
+
+func GetSubscribedPostIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+	postIds := make(chan []string)
+
+	go func() {
+		likeFilters := bson.M{
+			"userId":   subscriberId,
+			"postType": pb.PostType_SOCIAL_EVENT.String(),
+		}
+
+		likeCountChan, errChan := db.PostLike(tenant).CountDocuments(likeFilters)
+		var count int64 = 0
+		select {
+		case likeCount := <-likeCountChan:
+			count = likeCount
+		case err := <-errChan:
+			logger.Error("Failed getting subscribed post count", zap.Error(err))
+			postIds <- []string{}
+			return
+		}
+
+		likePostsChan, errChan := db.PostLike(tenant).Find(likeFilters, bson.D{}, count, 0)
+		likePostIds := []string{}
+		select {
+		case likePosts := <-likePostsChan:
+			for _, likePost := range likePosts {
+				likePostIds = append(likePostIds, likePost.PostId)
+			}
+			postIds <- likePostIds
+		case err := <-errChan:
+			logger.Error("Failed getting like posts", zap.Error(err))
+			postIds <- []string{}
+			return
+		}
+	}()
+
+	return postIds
+}
 
 func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 	savedTagsPromise := make(chan bool)

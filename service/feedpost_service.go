@@ -121,6 +121,46 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (
 	return &postProto, nil
 }
 
+func (s *FeedpostService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedRequest) (*pb.FeedResponse, error) {
+	// logger.Info("GetFeed", zap.Any("req", req))
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+	if req.PageSize == 0 {
+		req.PageSize = 10
+	}
+	logger.Info("Getting feed for ", zap.String("feedType", pb.PostType_SOCIAL_EVENT.String()))
+
+	eventStatus := pb.EventStatus_FUTURE
+	postIds := []string{}
+	if req.Filters != nil {
+		if len(strings.TrimSpace(req.Filters.SubscriberId)) > 0 {
+			subscribedPostIds := <-extensions.GetSubscribedPostIds(s.db, tenant, req.Filters.SubscriberId)
+			postIds = subscribedPostIds
+		}
+		eventStatus = req.Filters.EventStatus
+	}
+
+	feed := s.db.FeedPost(tenant).GetEventFeed(
+		eventStatus,
+		postIds,
+		req.ReferencePost,
+		int64(req.PageNumber),
+		int64(req.PageSize))
+
+	feedProto := []*pb.UserPostProto{}
+	copier.Copy(&feedProto, feed)
+
+	response := &pb.FeedResponse{Posts: feedProto}
+
+	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
+		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default", false)
+	}).([]chan bool)
+	for _, promise := range addUserPostActionsPromises {
+		<-promise
+	}
+
+	return response, nil
+}
+
 func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.FeedResponse, error) {
 	// logger.Info("GetFeed", zap.Any("req", req))
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
