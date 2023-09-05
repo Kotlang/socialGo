@@ -167,7 +167,13 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	if req.PageSize == 0 {
 		req.PageSize = 10
 	}
-	logger.Info("Getting feed for ", zap.String("feedType", req.Filters.PostType.String()))
+	if req.Filters != nil {
+		logger.Info("Getting feed for ", zap.String("feedType", req.Filters.PostType.String()))
+	} else {
+		err := "PostType filters is not provided"
+		logger.Error(err)
+		return nil, status.Error(codes.InvalidArgument, err)
+	}
 
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.Filters,
