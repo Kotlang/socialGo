@@ -50,6 +50,12 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		feedPostModel.Language = "english"
 	}
 
+	if req.PostType != pb.PostType_SOCIAL_EVENT {
+		feedPostModel.SocialEventMetadata = nil
+	} else {
+		feedPostModel.SocialEventMetadata.Type = req.SocialEventMetadata.Type.String()
+	}
+
 	// save post.
 	savePostPromise := s.db.FeedPost(tenant).Save(feedPostModel)
 
