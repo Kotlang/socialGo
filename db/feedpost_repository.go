@@ -33,12 +33,12 @@ func (r *FeedPostRepository) GetEventFeed(
 	filters["referencePost"] = referencePost
 
 	if pb.EventStatus_PAST == eventStatus {
-		filters["socialEventMetadata.endat"] = bson.M{"$lt": now}
+		filters["socialEventMetadata.endAt"] = bson.M{"$lt": now}
 	} else if pb.EventStatus_ONGOING == eventStatus {
-		filters["socialEventMetadata.startat"] = bson.M{"$lt": now}
-		filters["socialEventMetadata.endat"] = bson.M{"$gt": now}
+		filters["socialEventMetadata.startAt"] = bson.M{"$lt": now}
+		filters["socialEventMetadata.endAt"] = bson.M{"$gt": now}
 	} else if pb.EventStatus_FUTURE == eventStatus {
-		filters["socialEventMetadata.startat"] = bson.M{"$gt": now}
+		filters["socialEventMetadata.startAt"] = bson.M{"$gt": now}
 	}
 
 	sort := bson.D{
