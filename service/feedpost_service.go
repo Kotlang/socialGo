@@ -226,11 +226,12 @@ func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUp
 func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServer) error {
 	userId, tenant := auth.GetUserIdAndTenant(stream.Context())
 	logger.Info("Uploading post media", zap.String("userId", userId), zap.String("tenant", tenant))
+	maxFileSize := 50 * 1024 * 1024
 
 	allowedMimeTypes := []string{"image/jpeg", "image/png", "video/avi", "video/mp4", "video/webm"}
 	imageData, contentType, err := bootUtils.BufferGrpcServerStream(
 		allowedMimeTypes,
-		50*1024*1024, // 50mb max size limit.
+		maxFileSize,
 		func() ([]byte, error) {
 			err := bootUtils.StreamContextError(stream.Context())
 			if err != nil {

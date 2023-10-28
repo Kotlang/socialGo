@@ -15,3 +15,11 @@ func ValidateUserPostRequest(req *pb.UserPostRequest) error {
 
 	return nil
 }
+
+func ValidateEventRequest(req *pb.CreateEventRequest) error {
+	if len(req.Post) == 0 {
+		return status.Error(codes.InvalidArgument, "Event text is empty.")
+	}
+
+	return nil
+}
