@@ -16,6 +16,15 @@ func (db *SocialDb) FeedPost(tenant string) *FeedPostRepository {
 	return &FeedPostRepository{repo}
 }
 
+func (db *SocialDb) Event(tenant string) *EventRepository {
+	repo := odm.AbstractRepository[models.EventModel]{
+		Database:       tenant + "_social",
+		CollectionName: "feed_event",
+	}
+
+	return &EventRepository{repo}
+}
+
 func (db *SocialDb) Tag(tenant string) *TagRepository {
 	repo := odm.AbstractRepository[models.PostTagModel]{
 		Database:       tenant + "_social",
