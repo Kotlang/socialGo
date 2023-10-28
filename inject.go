@@ -12,6 +12,7 @@ type Inject struct {
 	PostActionsService *service.PostActionsService
 	FollowGraphService *service.FollowGraphService
 	SocialStatsService *service.SocialStatsService
+	EventService       *service.EventService
 }
 
 func NewInject() *Inject {
@@ -22,5 +23,6 @@ func NewInject() *Inject {
 	inj.PostActionsService = service.NewPostActionsService(inj.SocialDb)
 	inj.FollowGraphService = service.NewFollowGraphService(inj.SocialDb)
 	inj.SocialStatsService = service.NewSocialStatsService(inj.SocialDb)
+	inj.EventService = service.NewEventService(inj.SocialDb)
 	return inj
 }

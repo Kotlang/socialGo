@@ -36,6 +36,7 @@ func main() {
 	pb.RegisterPostActionsServer(bootServer.GrpcServer, inject.PostActionsService)
 	pb.RegisterFollowGraphServer(bootServer.GrpcServer, inject.FollowGraphService)
 	pb.RegisterSocialStatsServer(bootServer.GrpcServer, inject.SocialStatsService)
+	pb.RegisterEventsServer(bootServer.GrpcServer, inject.EventService)
 
 	bootServer.Start(grpcPort, webPort)
 }
