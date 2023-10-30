@@ -146,8 +146,9 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 
 	feedProto := []*pb.EventProto{}
 	copier.Copy(&feedProto, feed)
-
 	response := &pb.EventFeedResponse{Events: feedProto}
+	response.PageNumber = req.PageNumber
+	response.PageSize = req.PageSize
 
 	addUserPostActionsPromises := funk.Map(response.Events, func(x *pb.EventProto) chan bool {
 		return extensions.AttachEventInfoAsync(s.db, ctx, x, userId, tenant, "default", false)
