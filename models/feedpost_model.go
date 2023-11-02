@@ -42,6 +42,7 @@ type FeedPostModel struct {
 	ReferencePost       string               `bson:"referencePost"`
 	Replies             []string             `bson:"replies"`
 	PostType            string               `bson:"postType"`
+	ContentType         []string             `bson:"contentType"`
 	UserId              string               `bson:"userId"`
 	NumLikes            int                  `bson:"numLikes"`
 	NumShares           int                  `bson:"numShares"`
