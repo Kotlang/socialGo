@@ -5,6 +5,6 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/odm"
 )
 
-type PostLikeRepository struct {
+type LikeRepository struct {
 	odm.AbstractRepository[models.PostLikeModel]
 }

@@ -34,13 +34,13 @@ func (db *SocialDb) Tag(tenant string) *TagRepository {
 	return &TagRepository{repo}
 }
 
-func (db *SocialDb) PostLike(tenant string) *PostLikeRepository {
+func (db *SocialDb) PostLike(tenant string) *LikeRepository {
 	repo := odm.AbstractRepository[models.PostLikeModel]{
 		Database:       tenant + "_social",
 		CollectionName: "likes",
 	}
 
-	return &PostLikeRepository{repo}
+	return &LikeRepository{repo}
 }
 
 func (db *SocialDb) FollowersList(tenant string) *FollowersListRepository {
