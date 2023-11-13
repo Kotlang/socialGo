@@ -18,7 +18,6 @@ type EventRepository struct {
 func (r *EventRepository) GetEventFeed(
 	eventStatus pb.EventStatus,
 	eventIds []string,
-	referenceEvent string,
 	pageNumber, pageSize int64) []models.EventModel {
 
 	now := time.Now().Unix()
@@ -28,9 +27,6 @@ func (r *EventRepository) GetEventFeed(
 		filters["_id"] = bson.M{"$in": eventIds}
 	}
 
-	// parent event referenceEvent field is always empty string in db.
-	filters["referenceEvent"] = referenceEvent
-
 	if pb.EventStatus_PAST == eventStatus {
 		filters["endAt"] = bson.M{"$lt": now}
 	} else if pb.EventStatus_ONGOING == eventStatus {
@@ -39,6 +35,7 @@ func (r *EventRepository) GetEventFeed(
 	} else if pb.EventStatus_FUTURE == eventStatus {
 		filters["startAt"] = bson.M{"$gt": now}
 	}
+	filters["isDeleted"] = false
 
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
@@ -55,29 +52,6 @@ func (r *EventRepository) GetEventFeed(
 		return res
 	case err := <-errChan:
 		logger.Error("Failed getting feed", zap.Error(err))
-		return []models.EventModel{}
-	}
-}
-
-func (r *EventRepository) GetComments(
-	referenceEvent string,
-	pageNumber, pageSize int64) []models.EventModel {
-	filters := bson.M{"referenceEvent": referenceEvent}
-
-	sort := bson.D{
-		{Key: "createdOn", Value: -1},
-		{Key: "numShares", Value: -1},
-		{Key: "numReplies", Value: -1},
-		{Key: "numLikes", Value: -1},
-	}
-
-	skip := pageNumber * pageSize
-	resultChan, errChan := r.Find(filters, sort, pageSize, skip)
-	select {
-	case res := <-resultChan:
-		return res
-	case err := <-errChan:
-		logger.Error("Failed getting comments", zap.Error(err))
 		return []models.EventModel{}
 	}
 }

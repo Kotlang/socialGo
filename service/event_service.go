@@ -12,6 +12,8 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
 	"github.com/thoas/go-funk"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -49,17 +51,6 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 	// save tags.
 	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
 
-	// if it is a comment/answer increment numReplies
-	if len(eventModel.ReferenceEvent) > 0 {
-		parentEventChan, errChan := s.db.Event(tenant).FindOneById(eventModel.ReferenceEvent)
-		select {
-		case parentEvent := <-parentEventChan:
-			parentEvent.NumReplies = parentEvent.NumReplies + 1
-			<-s.db.Event(tenant).Save(parentEvent)
-		case err := <-errChan:
-			return nil, status.Error(codes.NotFound, "Referenced Post not found. "+err.Error())
-		}
-	}
 	//TODO: Add field event to socialStatsModel and increment eventsCount
 	savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
 
@@ -75,7 +66,8 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 		res := &pb.EventProto{}
 		copier.Copy(res, eventModel)
 
-		attachAuthorInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default", false)
+		//populate hasUsserLiked field
+		attachAuthorInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
 		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
 			EventType: "event.created",
@@ -99,23 +91,44 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 }
 
 // TODO: Add feild isDeleted to eventModel and update it to true
-func (s *EventService) DeleteEvent(ctx context.Context, req *pb.DeleteEventRequest) (*pb.SocialStatusResponse, error) {
-	return nil, nil
+func (s *EventService) DeleteEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.SocialStatusResponse, error) {
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+
+	eventModelChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
+	select {
+	case eventModel := <-eventModelChan:
+		eventModel.IsDeleted = true
+		<-s.db.Event(tenant).Save(eventModel)
+	case err := <-errChan:
+		logger.Error("Failed to delete event", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	//TODO: Add field event to socialStatsModel and decrement eventsCount
+	//TODO: Delete all the comments and likes on the event
+
+	return &pb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *EventService) GetEvent(ctx context.Context, req *pb.GetEventRequest) (*pb.EventProto, error) {
+func (s *EventService) GetEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.EventProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	EventProto := pb.EventProto{}
 
-	eventChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
+	filters := bson.M{}
+	filters["_id"] = req.EventId
+	filters["isDeleted"] = false
+	eventChan, errChan := s.db.Event(tenant).FindOne(filters)
 	select {
 	case event := <-eventChan:
 		copier.Copy(&EventProto, event)
 	case err := <-errChan:
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, "Event not found")
+		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	<-extensions.AttachEventInfoAsync(s.db, ctx, &EventProto, userId, tenant, "default", true)
+	<-extensions.AttachEventInfoAsync(s.db, ctx, &EventProto, userId, tenant, "default")
 	return &EventProto, nil
 }
 
@@ -130,9 +143,11 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	eventStatus := pb.EventStatus_FUTURE
 	eventIds := []string{}
 	if req.Filters != nil {
-		if len(strings.TrimSpace(req.Filters.SubscriberId)) > 0 {
-			subscribedPostIds := <-extensions.GetSubscribedPostIds(s.db, tenant, req.Filters.SubscriberId)
-			eventIds = subscribedPostIds
+		if req.Filters.GetSubscribedEvents {
+			eventIds = <-extensions.GetSubscribedPostIds(s.db, tenant, userId)
+			if len(eventIds) == 0 {
+				return &pb.EventFeedResponse{Events: []*pb.EventProto{}}, nil
+			}
 		}
 		eventStatus = req.Filters.EventStatus
 	}
@@ -140,7 +155,6 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	feed := s.db.Event(tenant).GetEventFeed(
 		eventStatus,
 		eventIds,
-		req.ReferencePost,
 		int64(req.PageNumber),
 		int64(req.PageSize))
 
@@ -151,11 +165,32 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	response.PageSize = req.PageSize
 
 	addUserPostActionsPromises := funk.Map(response.Events, func(x *pb.EventProto) chan bool {
-		return extensions.AttachEventInfoAsync(s.db, ctx, x, userId, tenant, "default", false)
+		return extensions.AttachEventInfoAsync(s.db, ctx, x, userId, tenant, "default")
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
 		<-promise
 	}
 
 	return response, nil
+}
+
+func (s *EventService) SubscribeEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.SocialStatusResponse, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+	eventSubscribeModel := s.db.EventSubscribe(tenant).GetModel(req)
+	eventSubscribeModel.UserId = userId
+
+	isExistsById := s.db.EventSubscribe(tenant).IsExistsById(eventSubscribeModel.Id())
+
+	if isExistsById {
+		return &pb.SocialStatusResponse{Status: "success"}, nil
+	}
+
+	err := <-s.db.EventSubscribe(tenant).Save(eventSubscribeModel)
+
+	if err != nil {
+		logger.Error("Failed to subscribe event", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+
+	}
+	return &pb.SocialStatusResponse{Status: "success"}, nil
 }

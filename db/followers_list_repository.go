@@ -18,7 +18,7 @@ func (r *FollowersListRepository) GetFollowers(userId string, pageNumber, pageSi
 
 	followersChan, errChan := r.Find(bson.M{
 		"userId": userId,
-	}, bson.D{{"createdOn", -1}}, pageSize, skip)
+	}, bson.D{{Key: "createdOn", Value: -1}}, pageSize, skip)
 
 	select {
 	case followers := <-followersChan:
@@ -36,7 +36,7 @@ func (r *FollowersListRepository) GetFollowing(userId string, pageNumber, pageSi
 
 	followingChan, errChan := r.Find(bson.M{
 		"followerId": userId,
-	}, bson.D{{"createdOn", -1}}, pageSize, skip)
+	}, bson.D{{Key: "createdOn", Value: -1}}, pageSize, skip)
 
 	select {
 	case following := <-followingChan:
