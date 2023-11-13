@@ -33,14 +33,29 @@ func (db *SocialDb) Tag(tenant string) *TagRepository {
 
 	return &TagRepository{repo}
 }
-
-func (db *SocialDb) PostLike(tenant string) *LikeRepository {
-	repo := odm.AbstractRepository[models.PostLikeModel]{
+func (db *SocialDb) Comment(tenant string) *CommentRepository {
+	repo := odm.AbstractRepository[models.CommentModel]{
 		Database:       tenant + "_social",
-		CollectionName: "likes",
+		CollectionName: "comments",
+	}
+	return &CommentRepository{repo}
+}
+
+func (db *SocialDb) EventSubscribe(tenant string) *EventSubscribeRepository {
+	repo := odm.AbstractRepository[models.EventSubscribeModel]{
+		Database:       tenant + "_social",
+		CollectionName: "event_subscribe",
+	}
+	return &EventSubscribeRepository{repo}
+}
+
+func (db *SocialDb) React(tenant string) *ReactRepository {
+	repo := odm.AbstractRepository[models.ReactionModel]{
+		Database:       tenant + "_social",
+		CollectionName: "reaction",
 	}
 
-	return &LikeRepository{repo}
+	return &ReactRepository{repo}
 }
 
 func (db *SocialDb) FollowersList(tenant string) *FollowersListRepository {
