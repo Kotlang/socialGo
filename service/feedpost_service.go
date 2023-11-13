@@ -56,18 +56,6 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	// save tags.
 	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
 
-	// if it is a comment/answer increment numReplies
-	if len(feedPostModel.ReferencePost) > 0 {
-		parentPostChan, errChan := s.db.FeedPost(tenant).FindOneById(feedPostModel.ReferencePost)
-		select {
-		case parentPost := <-parentPostChan:
-			parentPost.NumReplies = parentPost.NumReplies + 1
-			<-s.db.FeedPost(tenant).Save(parentPost)
-		case err := <-errChan:
-			return nil, status.Error(codes.NotFound, "Referenced Post not found. "+err.Error())
-		}
-	}
-
 	savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
 
 	// wait for async operations to finish.
@@ -82,7 +70,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 		res := &pb.UserPostProto{}
 		copier.Copy(res, feedPostModel)
 
-		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default", false)
+		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
 		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
 			EventType: "post.created",
@@ -117,7 +105,7 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	<-extensions.AttachPostUserInfoAsync(s.db, ctx, &postProto, userId, tenant, "default", true)
+	<-extensions.AttachPostUserInfoAsync(s.db, ctx, &postProto, userId, tenant, "default")
 	return &postProto, nil
 }
 
@@ -137,7 +125,6 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.Filters,
-		req.ReferencePost,
 		int64(req.PageNumber),
 		int64(req.PageSize))
 
@@ -146,9 +133,8 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 
 	response := &pb.FeedResponse{Posts: feedProto}
 
-	attachAnswers := (req.Filters.PostType == pb.PostType_QnA_QUESTION)
 	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
-		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default", attachAnswers)
+		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default")
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
 		<-promise

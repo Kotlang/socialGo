@@ -15,7 +15,6 @@ type FeedPostRepository struct {
 
 func (r *FeedPostRepository) GetFeed(
 	feedFilters *pb.FeedFilters,
-	referencePost string,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
 	filters := bson.M{}
@@ -32,8 +31,8 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.UserId
 	}
 
-	// parent post referencePost field is always empty string in db.
-	filters["referencePost"] = referencePost
+	// // parent post referencePost field is always empty string in db.
+	// filters["referencePost"] = referencePost
 
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
