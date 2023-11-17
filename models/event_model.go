@@ -7,7 +7,6 @@ import (
 type EventModel struct {
 	EventId        string           `bson:"_id"`
 	Title          string           `bson:"title"`
-	Post           string           `bson:"post"`
 	Type           string           `bson:"type"`
 	StartAt        int64            `bson:"startAt"`
 	EndAt          int64            `bson:"endAt"`

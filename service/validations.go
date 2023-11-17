@@ -17,7 +17,7 @@ func ValidateUserPostRequest(req *pb.UserPostRequest) error {
 }
 
 func ValidateEventRequest(req *pb.CreateEventRequest) error {
-	if len(req.Post) == 0 {
+	if len(req.Description) == 0 {
 		return status.Error(codes.InvalidArgument, "Event text is empty.")
 	}
 

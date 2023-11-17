@@ -73,7 +73,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
 				"postId": eventModel.EventId,
-				"body":   eventModel.Post,
+				"body":   eventModel.Description,
 				"title":  eventModel.Title,
 			},
 			Topic:       fmt.Sprintf("%s.event.created", tenant),
