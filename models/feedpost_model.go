@@ -22,22 +22,20 @@ type Location struct {
 }
 
 type FeedPostModel struct {
-	PostId        string           `bson:"_id"`
-	Title         string           `bson:"title"`
-	Post          string           `bson:"post"`
-	MediaUrls     []MediaUrl       `bson:"mediaUrls"`
-	WebPreviews   []WebPreview     `bson:"webPreviews"`
-	ReferencePost string           `bson:"referencePost"`
-	Replies       []string         `bson:"replies"`
-	PostType      string           `bson:"postType"`
-	UserId        string           `bson:"userId"`
-	NumReacts     map[string]int64 `bson:"numReacts"`
-	NumShares     int64            `bson:"numShares"`
-	NumReplies    int64            `bson:"numReplies"`
-	Tags          []string         `bson:"tags"`
-	CreatedOn     int64            `bson:"createdOn"`
-	Language      string           `bson:"language"`
-	IsDeleted     bool             `bson:"isDeleted"`
+	PostId      string           `bson:"_id"`
+	Title       string           `bson:"title"`
+	Post        string           `bson:"post"`
+	MediaUrls   []MediaUrl       `bson:"mediaUrls"`
+	WebPreviews []WebPreview     `bson:"webPreviews"`
+	PostType    string           `bson:"postType"`
+	UserId      string           `bson:"userId"`
+	NumReacts   map[string]int64 `bson:"numReacts"`
+	NumShares   int64            `bson:"numShares"`
+	NumReplies  int64            `bson:"numReplies"`
+	Tags        []string         `bson:"tags"`
+	CreatedOn   int64            `bson:"createdOn"`
+	Language    string           `bson:"language"`
+	IsDeleted   bool             `bson:"isDeleted"`
 }
 
 func (m *FeedPostModel) Id() string {
