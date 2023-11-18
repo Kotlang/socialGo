@@ -28,7 +28,6 @@ type FeedPostModel struct {
 	MediaUrls   []MediaUrl       `bson:"mediaUrls"`
 	WebPreviews []WebPreview     `bson:"webPreviews"`
 	PostType    string           `bson:"postType"`
-	ContentType []string         `bson:"contentType"`
 	UserId      string           `bson:"userId"`
 	NumReacts   map[string]int64 `bson:"numReacts"`
 	NumShares   int64            `bson:"numShares"`
@@ -37,6 +36,7 @@ type FeedPostModel struct {
 	CreatedOn   int64            `bson:"createdOn"`
 	Language    string           `bson:"language"`
 	IsDeleted   bool             `bson:"isDeleted"`
+	ContentType []string         `bson:"contentType"`
 }
 
 func (m *FeedPostModel) Id() string {
