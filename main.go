@@ -33,9 +33,10 @@ func main() {
 		})
 	bootServer := server.NewGoApiBoot(corsConfig)
 	pb.RegisterUserPostServer(bootServer.GrpcServer, inject.FeedPostService)
-	pb.RegisterPostActionsServer(bootServer.GrpcServer, inject.PostActionsService)
+	pb.RegisterActionsServer(bootServer.GrpcServer, inject.ActionsService)
 	pb.RegisterFollowGraphServer(bootServer.GrpcServer, inject.FollowGraphService)
 	pb.RegisterSocialStatsServer(bootServer.GrpcServer, inject.SocialStatsService)
+	pb.RegisterEventsServer(bootServer.GrpcServer, inject.EventService)
 
 	bootServer.Start(grpcPort, webPort)
 }
