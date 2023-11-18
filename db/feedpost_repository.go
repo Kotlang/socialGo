@@ -31,9 +31,6 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.UserId
 	}
 
-	// // parent post referencePost field is always empty string in db.
-	// filters["referencePost"] = referencePost
-
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
 		{Key: "numShares", Value: -1},

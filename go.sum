@@ -33,6 +33,8 @@ github.com/SaiNageswarS/go-api-boot v0.1.28 h1:f6Kew9vbYGcZ/Udz/wavA+RGmfg/3W7gA
 github.com/SaiNageswarS/go-api-boot v0.1.28/go.mod h1:OOqa0degNi48DMzvTNYvQrBDxDADX1c+SwI3PivXFFo=
 github.com/SaiNageswarS/go-api-boot v0.1.34 h1:OGxonBfQFyxurt+jVN3ispRi4AosyRKJGl1FNKdjZ38=
 github.com/SaiNageswarS/go-api-boot v0.1.34/go.mod h1:UBJWCDLpMKU+8wg+BscBrb4a22fYx1B0WoM+5LjMm20=
+github.com/SaiNageswarS/go-api-boot v0.1.35-0.20231117084700-7a93047ca703 h1:wfV7Mnp7tqrZUnf36hPid5vcSdbN3hmG4QFJXyCo/4Q=
+github.com/SaiNageswarS/go-api-boot v0.1.35-0.20231117084700-7a93047ca703/go.mod h1:UBJWCDLpMKU+8wg+BscBrb4a22fYx1B0WoM+5LjMm20=
 github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf/go.mod h1:ybxpYRFXyAe+OPACYpWeL0wqObRcbAqCMya13uyzqw0=

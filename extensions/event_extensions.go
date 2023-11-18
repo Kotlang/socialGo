@@ -29,9 +29,8 @@ func AttachEventInfoAsync(
 	return done
 }
 
-// TODO: Implement subscriber logic
-func GetSubscribedPostIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
-	postIds := make(chan []string)
+func GetSubscribedEventIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+	eventIds := make(chan []string)
 
 	go func() {
 		subscribeFilters := bson.M{}
@@ -43,25 +42,25 @@ func GetSubscribedPostIds(db *db.SocialDb, tenant string, subscriberId string) c
 		case subscribeCount := <-subscribeCountChan:
 			count = subscribeCount
 		case err := <-errChan:
-			logger.Error("Failed getting subscribed post count", zap.Error(err))
-			postIds <- []string{}
+			logger.Error("Failed getting subscribed event count", zap.Error(err))
+			eventIds <- []string{}
 			return
 		}
 
 		subscribeEventChan, errChan := db.EventSubscribe(tenant).Find(subscribeFilters, bson.D{}, count, 0)
-		subscribedPostIds := []string{}
+		subscribedeventIds := []string{}
 		select {
-		case subscribedPosts := <-subscribeEventChan:
-			for _, subscribedPosts := range subscribedPosts {
-				subscribedPostIds = append(subscribedPostIds, subscribedPosts.EventId)
+		case subscribedevents := <-subscribeEventChan:
+			for _, subscribedevents := range subscribedevents {
+				subscribedeventIds = append(subscribedeventIds, subscribedevents.EventId)
 			}
-			postIds <- subscribedPostIds
+			eventIds <- subscribedeventIds
 		case err := <-errChan:
 			logger.Error("Failed getting subscribed events", zap.Error(err))
-			postIds <- []string{}
+			eventIds <- []string{}
 			return
 		}
 	}()
 
-	return postIds
+	return eventIds
 }

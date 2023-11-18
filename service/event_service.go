@@ -52,12 +52,12 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
 
 	//TODO: Add field event to socialStatsModel and increment eventsCount
-	savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
+	// savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
 
 	// wait for async operations to finish.
 	<-saveEventPromise
 	<-saveTagsPromise
-	<-savePostCountPromise
+	// <-savePostCountPromise
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(eventModel.EventId)
 
@@ -66,7 +66,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 		res := &pb.EventProto{}
 		copier.Copy(res, eventModel)
 
-		//populate hasUsserLiked field
+		//populate hasUserReacted field
 		attachAuthorInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
 		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
@@ -90,7 +90,6 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 	}
 }
 
-// TODO: Add feild isDeleted to eventModel and update it to true
 func (s *EventService) DeleteEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.SocialStatusResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
@@ -144,7 +143,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	eventIds := []string{}
 	if req.Filters != nil {
 		if req.Filters.GetSubscribedEvents {
-			eventIds = <-extensions.GetSubscribedPostIds(s.db, tenant, userId)
+			eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
 			if len(eventIds) == 0 {
 				return &pb.EventFeedResponse{Events: []*pb.EventProto{}}, nil
 			}
