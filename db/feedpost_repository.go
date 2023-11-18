@@ -48,7 +48,7 @@ func (r *FeedPostRepository) GetFeed(
 	skip := pageNumber * pageSize
 
 	//Run a aggregation query to get the posts liked by the user as posts and likes are in different collections
-	if feedFilters.FetchUserLikedPosts {
+	if feedFilters.FetchUserReactedPosts {
 
 		filters["res.userId"] = feedFilters.UserId
 
