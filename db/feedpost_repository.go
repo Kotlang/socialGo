@@ -1,8 +1,6 @@
 package db
 
 import (
-	"context"
-
 	pb "github.com/Kotlang/socialGo/generated"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
@@ -11,8 +9,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type FeedPostRepositoryInterface interface {
+	odm.BootRepository[models.FeedPostModel]
+	GetFeed(feedFilters *pb.FeedFilters, pageNumber, pageSize int64) []models.FeedPostModel
+}
 type FeedPostRepository struct {
-	odm.AbstractRepository[models.FeedPostModel]
+	odm.UnimplementedBootRepository[models.FeedPostModel]
 }
 
 func (r *FeedPostRepository) GetFeed(
@@ -35,9 +37,6 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.CreatedBy
 	}
 
-	// // parent post referencePost field is always empty string in db.
-	// filters["referencePost"] = referencePost
-
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
 		{Key: "numShares", Value: -1},
@@ -51,8 +50,6 @@ func (r *FeedPostRepository) GetFeed(
 	if feedFilters.FetchUserReactedPosts {
 
 		filters["res.userId"] = feedFilters.UserId
-
-		coll := odm.GetClient().Database(r.Database).Collection(r.CollectionName)
 		pipeline := bson.A{
 			bson.D{
 				{Key: "$lookup",
@@ -70,20 +67,14 @@ func (r *FeedPostRepository) GetFeed(
 			bson.D{{Key: "$limit", Value: pageSize}},
 		}
 
-		cursor, err := coll.Aggregate(context.TODO(), pipeline)
-		if err != nil {
-			logger.Error("Error executing aggregation query:", zap.Error(err))
+		resultsChan, errChan := r.Aggregate(pipeline)
+		select {
+		case res := <-resultsChan:
+			return res
+		case err := <-errChan:
+			logger.Error("Failed getting feed", zap.Error(err))
 			return []models.FeedPostModel{}
 		}
-		defer cursor.Close(context.Background())
-
-		// Process the results.
-		var results []models.FeedPostModel
-		if err := cursor.All(context.Background(), &results); err != nil {
-			logger.Error("Error decoding results:", zap.Error(err))
-			return []models.FeedPostModel{}
-		}
-		return results
 	}
 
 	if feedFilters.FetchUserCommentedPosts {

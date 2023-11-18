@@ -13,7 +13,7 @@ import (
 	"golang.org/x/net/html"
 )
 
-func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
+func SaveTags(db db.SocialDbInterface, tenant string, tags []string) chan bool {
 	savedTagsPromise := make(chan bool)
 
 	go func() {
@@ -40,7 +40,7 @@ func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 
 // Adds additional userProfile data, comments/answers to feedPost parameter.
 func AttachPostUserInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedPost *pb.UserPostProto,
 	userId, tenant, userType string) chan bool {

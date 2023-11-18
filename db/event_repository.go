@@ -11,8 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type EventRepositoryInterface interface {
+	odm.BootRepository[models.EventModel]
+	GetEventFeed(eventStatus pb.EventStatus, eventIds []string, pageNumber, pageSize int64) []models.EventModel
+}
+
 type EventRepository struct {
-	odm.AbstractRepository[models.EventModel]
+	odm.UnimplementedBootRepository[models.EventModel]
 }
 
 func (r *EventRepository) GetEventFeed(

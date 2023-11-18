@@ -8,8 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type TagRepositoryInterface interface {
+	odm.BootRepository[models.PostTagModel]
+	FindTagsRanked() []models.PostTagModel
+}
+
 type TagRepository struct {
-	odm.AbstractRepository[models.PostTagModel]
+	odm.UnimplementedBootRepository[models.PostTagModel]
 }
 
 func (r *TagRepository) FindTagsRanked() []models.PostTagModel {

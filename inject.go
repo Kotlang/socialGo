@@ -6,7 +6,7 @@ import (
 )
 
 type Inject struct {
-	SocialDb *db.SocialDb
+	SocialDb db.SocialDbInterface
 
 	FeedPostService    *service.FeedpostService
 	ActionsService     *service.ActionsService

@@ -24,10 +24,10 @@ import (
 
 type FeedpostService struct {
 	pb.UnimplementedUserPostServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewFeedpostService(db *db.SocialDb) *FeedpostService {
+func NewFeedpostService(db db.SocialDbInterface) *FeedpostService {
 	return &FeedpostService{
 		db: db,
 	}

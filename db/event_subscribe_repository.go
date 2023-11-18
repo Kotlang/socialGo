@@ -5,6 +5,10 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/odm"
 )
 
+type EventSubscribeRepositoryInterface interface {
+	odm.BootRepository[models.EventSubscribeModel]
+}
+
 type EventSubscribeRepository struct {
-	odm.AbstractRepository[models.EventSubscribeModel]
+	odm.UnimplementedBootRepository[models.EventSubscribeModel]
 }

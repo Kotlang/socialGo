@@ -8,8 +8,14 @@ import (
 	"go.uber.org/zap"
 )
 
+type ReactRepositoryInterface interface {
+	odm.BootRepository[models.ReactionModel]
+	GetUserReactions(entityId, userId string) []string
+	GetId(entityId, userId string) string
+}
+
 type ReactRepository struct {
-	odm.AbstractRepository[models.ReactionModel]
+	odm.UnimplementedBootRepository[models.ReactionModel]
 }
 
 // TODO: Use mongo find one with projection to get only reaction field instead of fetching whole document.

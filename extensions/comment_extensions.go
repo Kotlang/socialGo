@@ -8,7 +8,7 @@ import (
 )
 
 func AttachCommentUserInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	comment *pb.CommentProto,
 	userId, tenant, userType string) chan bool {

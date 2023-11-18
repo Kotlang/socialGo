@@ -19,10 +19,10 @@ import (
 
 type ActionsService struct {
 	pb.UnimplementedActionsServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewActionsService(db *db.SocialDb) *ActionsService {
+func NewActionsService(db db.SocialDbInterface) *ActionsService {
 	return &ActionsService{
 		db: db,
 	}
@@ -303,7 +303,7 @@ func (s *ActionsService) FetchCommentById(ctx context.Context, req *pb.IdRequest
 	}
 }
 
-func getExistingReaction(db *db.SocialDb, tenant string, reactionId string) *models.ReactionModel {
+func getExistingReaction(db db.SocialDbInterface, tenant string, reactionId string) *models.ReactionModel {
 	reaction := &models.ReactionModel{}
 
 	reactionResChan, errChan := db.React(tenant).FindOneById(reactionId)

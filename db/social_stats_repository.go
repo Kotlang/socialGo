@@ -5,8 +5,16 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/odm"
 )
 
+type SocialStatsRepositoryInterface interface {
+	odm.BootRepository[models.SocialStatsModel]
+	GetStats(userId string) *models.SocialStatsModel
+	UpdatePostCount(userId string, posts int32) chan error
+	UpdateFollowerCount(userId string, followers int32) chan error
+	UpdateFollowingCount(userId string, following int32) chan error
+}
+
 type SocialStatsRepository struct {
-	odm.AbstractRepository[models.SocialStatsModel]
+	odm.UnimplementedBootRepository[models.SocialStatsModel]
 }
 
 func (r *SocialStatsRepository) GetStats(userId string) *models.SocialStatsModel {

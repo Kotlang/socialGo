@@ -21,10 +21,10 @@ import (
 
 type EventService struct {
 	pb.UnimplementedEventsServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewEventService(db *db.SocialDb) *EventService {
+func NewEventService(db db.SocialDbInterface) *EventService {
 	return &EventService{
 		db: db,
 	}

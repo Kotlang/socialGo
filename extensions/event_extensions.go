@@ -12,7 +12,7 @@ import (
 
 // Adds additional userProfile data, comments/answers to feedEvent parameter.
 func AttachEventInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvent *pb.EventProto,
 	userId, tenant, userType string) chan bool {
@@ -29,8 +29,7 @@ func AttachEventInfoAsync(
 	return done
 }
 
-// TODO: Implement subscriber logic
-func GetSubscribedPostIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+func GetSubscribedPostIds(db db.SocialDbInterface, tenant string, subscriberId string) chan []string {
 	postIds := make(chan []string)
 
 	go func() {

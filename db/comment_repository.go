@@ -8,8 +8,12 @@ import (
 	"go.uber.org/zap"
 )
 
+type CommentRepositoryInterface interface {
+	odm.BootRepository[models.CommentModel]
+	GetComments(parentId string, pageNumber, pageSize int64) []models.CommentModel
+}
 type CommentRepository struct {
-	odm.AbstractRepository[models.CommentModel]
+	odm.UnimplementedBootRepository[models.CommentModel]
 }
 
 func (c *CommentRepository) GetComments(parentId string, pageNumber, pageSize int64) []models.CommentModel {
