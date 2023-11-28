@@ -117,6 +117,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 	filters := bson.M{}
 	filters["_id"] = req.EventId
 	filters["isDeleted"] = false
+
 	eventChan, errChan := s.db.Event(tenant).FindOne(filters)
 	select {
 	case event := <-eventChan:

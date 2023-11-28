@@ -39,14 +39,12 @@ func SaveTags(db *db.SocialDb, tenant string, tags []string) chan bool {
 	return savedTagsPromise
 }
 
-// Adds additional userProfile data, comments/answers to feedPost parameter.
+// Adds additional userProfile data, reactions data to feedPost proto.
 func AttachPostUserInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
 	feedPost *socialPb.UserPostProto,
 	userId, tenant, userType string) chan bool {
-
-	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedPost", feedPost))
 
 	done := make(chan bool)
 
@@ -62,6 +60,7 @@ func AttachPostUserInfoAsync(
 	return done
 }
 
+// Adds additional userProfile data, reactions data to multiple feedPost proto.
 func AttachMultiplePostUserInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
@@ -73,6 +72,11 @@ func AttachMultiplePostUserInfoAsync(
 	postIds := []string{}
 	for _, feedPost := range feedPosts {
 		postIds = append(postIds, feedPost.PostId)
+	}
+
+	authorIds := []string{}
+	for _, feedPost := range feedPosts {
+		authorIds = append(authorIds, feedPost.UserId)
 	}
 
 	go func() {
@@ -96,7 +100,7 @@ func AttachMultiplePostUserInfoAsync(
 		case <-errChan:
 		}
 
-		authorProfiles := <-GetSocialProfiles(grpcContext, postIds)
+		authorProfiles := <-GetSocialProfiles(grpcContext, authorIds)
 		for _, feedPost := range feedPosts {
 			for _, authorProfile := range authorProfiles {
 				if feedPost.UserId == authorProfile.UserId {

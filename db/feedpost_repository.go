@@ -31,6 +31,8 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.UserId
 	}
 
+	filters["isDeleted"] = false
+
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
 		{Key: "numShares", Value: -1},

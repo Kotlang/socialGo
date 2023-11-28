@@ -11,6 +11,7 @@ import (
 	"github.com/Kotlang/socialGo/extensions"
 	notificationPb "github.com/Kotlang/socialGo/generated/notification"
 	socialPb "github.com/Kotlang/socialGo/generated/social"
+	"github.com/Kotlang/socialGo/models"
 	s3client "github.com/Kotlang/socialGo/s3Client"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/azure"
@@ -18,6 +19,7 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
 	"github.com/thoas/go-funk"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -98,7 +100,12 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *socialPb.GetPostRequ
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	postProto := socialPb.UserPostProto{}
 
-	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.PostId)
+	filters := bson.M{}
+	filters["_id"] = req.PostId
+	filters["isDeleted"] = false
+
+	postChan, errChan := s.db.FeedPost(tenant).FindOne(filters)
+
 	select {
 	case post := <-postChan:
 		copier.Copy(&postProto, post)
@@ -138,6 +145,33 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 	return response, nil
+}
+func (s *FeedpostService) DeletePost(ctx context.Context, req *socialPb.DeletePostRequest) (*socialPb.SocialStatusResponse, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+
+	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.Id)
+	postEntity := &models.FeedPostModel{}
+
+	select {
+	case postEntity = <-postChan:
+		if postEntity.UserId != userId {
+			return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
+		}
+	case err := <-errChan:
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	postEntity.IsDeleted = true
+
+	err := <-s.db.FeedPost(tenant).Save(postEntity)
+
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	} else {
+		return &socialPb.SocialStatusResponse{
+			Status: "success",
+		}, nil
+	}
 }
 
 func (s *FeedpostService) GetTags(ctx context.Context, req *socialPb.GetTagsRequest) (*socialPb.TagListResponse, error) {
@@ -199,30 +233,6 @@ func (s *FeedpostService) UploadPostMedia(stream socialPb.UserPost_UploadPostMed
 	case err := <-errChan:
 		logger.Error("Failed uploading media image.", zap.Error(err))
 		return status.Error(codes.Internal, err.Error())
-	}
-}
-
-func (s *FeedpostService) DeletePost(ctx context.Context, req *socialPb.DeletePostRequest) (*socialPb.SocialStatusResponse, error) {
-	userId, tenant := auth.GetUserIdAndTenant(ctx)
-
-	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.Id)
-	select {
-	case postEntity := <-postChan:
-		if postEntity.UserId != userId {
-			return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
-		}
-	case err := <-errChan:
-		return nil, status.Error(codes.NotFound, err.Error())
-	}
-
-	err := <-s.db.FeedPost(tenant).DeleteById(req.Id)
-
-	if err != nil {
-		return nil, status.Error(codes.Internal, err.Error())
-	} else {
-		return &socialPb.SocialStatusResponse{
-			Status: "success",
-		}, nil
 	}
 }
 

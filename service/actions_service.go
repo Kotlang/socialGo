@@ -221,6 +221,7 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequ
 
 	commentResChan, errResChan := s.db.Comment(tenant).FindOneById(req.Id)
 	comment := &models.CommentModel{}
+
 	//mark comment as deleted
 	select {
 	case comment = <-commentResChan:
@@ -230,6 +231,7 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequ
 		logger.Error("Probably comment not found", zap.Error(err))
 		return nil, err
 	}
+
 	//reduce numReplies of parent
 	switch comment.CommentOn {
 	case socialPb.EntityTypes_POST.String():
@@ -263,10 +265,11 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequ
 			return nil, err
 		}
 	}
+
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-// TODO: fetch nested comments
+// TODO: fetch nested comments, write extension for fetch
 func (s *ActionsService) FetchComments(ctx context.Context, req *socialPb.CommentFetchRequest) (*socialPb.CommentsFetchResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	comments := s.db.Comment(tenant).GetComments(req.ParentId, int64(req.PageNumber), int64(req.PageSize))

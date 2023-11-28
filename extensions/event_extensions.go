@@ -12,14 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-// Adds additional userProfile data, comments/answers to feedEvent parameter.
+// AttachEventInfoAsync attaches event reaction info to the event proto.
 func AttachEventInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
 	feedEvent *socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
-
-	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedEvent", feedEvent))
 
 	done := make(chan bool)
 
@@ -31,6 +29,7 @@ func AttachEventInfoAsync(
 	return done
 }
 
+// AttachMultipleEventInfoAsync attaches event reaction info to multiple event proto.
 func AttachMultipleEventInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
@@ -72,6 +71,7 @@ func AttachMultipleEventInfoAsync(
 	return done
 }
 
+// GetSubscribedEventIds returns the list of subscribed event ids for the given user
 func GetSubscribedEventIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
 	eventIds := make(chan []string)
 
