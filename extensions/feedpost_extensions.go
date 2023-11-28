@@ -8,8 +8,9 @@ import (
 	"sync"
 
 	"github.com/Kotlang/socialGo/db"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
+	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/net/html"
 )
 
@@ -38,14 +39,12 @@ func SaveTags(db db.SocialDbInterface, tenant string, tags []string) chan bool {
 	return savedTagsPromise
 }
 
-// Adds additional userProfile data, comments/answers to feedPost parameter.
+// Adds additional userProfile data, reactions data to feedPost proto.
 func AttachPostUserInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
-	feedPost *pb.UserPostProto,
+	feedPost *socialPb.UserPostProto,
 	userId, tenant, userType string) chan bool {
-
-	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedPost", feedPost))
 
 	done := make(chan bool)
 
@@ -54,6 +53,61 @@ func AttachPostUserInfoAsync(
 		// get post author profile
 		authorProfile := <-GetSocialProfile(grpcContext, feedPost.UserId)
 		feedPost.AuthorInfo = authorProfile
+
+		done <- true
+	}()
+
+	return done
+}
+
+// Adds additional userProfile data, reactions data to multiple feedPost proto.
+func AttachMultiplePostUserInfoAsync(
+	socialDb *db.SocialDb,
+	grpcContext context.Context,
+	feedPosts []*socialPb.UserPostProto,
+	userId, tenant, userType string) chan bool {
+
+	done := make(chan bool)
+
+	postIds := []string{}
+	for _, feedPost := range feedPosts {
+		postIds = append(postIds, feedPost.PostId)
+	}
+
+	authorIds := []string{}
+	for _, feedPost := range feedPosts {
+		authorIds = append(authorIds, feedPost.UserId)
+	}
+
+	go func() {
+		filter := bson.M{
+			"_id": bson.M{
+				"$in": postIds,
+			},
+		}
+
+		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
+
+		select {
+		case reactions := <-reactionResChan:
+			for _, reaction := range reactions {
+				for _, feedPost := range feedPosts {
+					if feedPost.PostId == reaction.EntityId {
+						feedPost.FeedUserReactions = reaction.Reaction
+					}
+				}
+			}
+		case <-errChan:
+		}
+
+		authorProfiles := <-GetSocialProfiles(grpcContext, authorIds)
+		for _, feedPost := range feedPosts {
+			for _, authorProfile := range authorProfiles {
+				if feedPost.UserId == authorProfile.UserId {
+					feedPost.AuthorInfo = authorProfile
+				}
+			}
+		}
 
 		done <- true
 	}()
@@ -84,17 +138,17 @@ func GetLinks(content string) chan []string {
 	return linksChan
 }
 
-func GeneratePreviews(urls []string) (chan []*pb.MediaUrl, chan []*pb.WebPreview) {
-	mediaUrlsChan := make(chan []*pb.MediaUrl)
-	webPreviewsChan := make(chan []*pb.WebPreview)
+func GeneratePreviews(urls []string) (chan []*socialPb.MediaUrl, chan []*socialPb.WebPreview) {
+	mediaUrlsChan := make(chan []*socialPb.MediaUrl)
+	webPreviewsChan := make(chan []*socialPb.WebPreview)
 	go func() {
-		mediaUrls := []*pb.MediaUrl{}
-		webPreviews := []*pb.WebPreview{}
+		mediaUrls := []*socialPb.MediaUrl{}
+		webPreviews := []*socialPb.WebPreview{}
 		wg := &sync.WaitGroup{}
 		mut := &sync.RWMutex{}
 		for _, url := range urls {
 			if subMatch := rg.Youtube.FindStringSubmatch(url); len(subMatch) > 1 {
-				mediaUrls = append(mediaUrls, &pb.MediaUrl{Url: subMatch[1], MimeType: "video/x-youtube"})
+				mediaUrls = append(mediaUrls, &socialPb.MediaUrl{Url: subMatch[1], MimeType: "video/x-youtube"})
 			}
 			wg.Add(1)
 			go func(url string) {
@@ -113,8 +167,8 @@ func GeneratePreviews(urls []string) (chan []*pb.MediaUrl, chan []*pb.WebPreview
 	return mediaUrlsChan, webPreviewsChan
 }
 
-func generateWebPreview(url string) *pb.WebPreview {
-	webPreview := &pb.WebPreview{Url: url}
+func generateWebPreview(url string) *socialPb.WebPreview {
+	webPreview := &socialPb.WebPreview{Url: url}
 
 	res, err := http.Get(url)
 	if err != nil {
@@ -130,7 +184,7 @@ func generateWebPreview(url string) *pb.WebPreview {
 	return webPreview
 }
 
-func traverse(n *html.Node, webPreview *pb.WebPreview) {
+func traverse(n *html.Node, webPreview *socialPb.WebPreview) {
 	if n == nil || (n.Type == html.ElementNode && n.Data == "body") {
 		return
 	}

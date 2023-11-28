@@ -5,7 +5,7 @@ import (
 
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
@@ -18,7 +18,7 @@ import (
 )
 
 type ActionsService struct {
-	pb.UnimplementedActionsServer
+	socialPb.UnimplementedActionsServer
 	db db.SocialDbInterface
 }
 
@@ -28,7 +28,7 @@ func NewActionsService(db db.SocialDbInterface) *ActionsService {
 	}
 }
 
-func (s *ActionsService) React(ctx context.Context, req *pb.ReactRequest) (*pb.SocialStatusResponse, error) {
+func (s *ActionsService) React(ctx context.Context, req *socialPb.ReactRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	reactionModel := getExistingReaction(s.db, tenant, userId+"/"+req.EntityId)
 
@@ -52,7 +52,7 @@ func (s *ActionsService) React(ctx context.Context, req *pb.ReactRequest) (*pb.S
 	// increment numReacts of the entity
 	if isNewReaction {
 		switch req.ReactionOn {
-		case pb.EntityTypes_POST:
+		case socialPb.EntityTypes_POST:
 			feedPostChan, errChan := s.db.FeedPost(tenant).FindOneById(req.EntityId)
 			select {
 			case feedPost := <-feedPostChan:
@@ -65,7 +65,7 @@ func (s *ActionsService) React(ctx context.Context, req *pb.ReactRequest) (*pb.S
 				logger.Error("Probably post not found", zap.Error(err))
 				return nil, err
 			}
-		case pb.EntityTypes_EVENT:
+		case socialPb.EntityTypes_EVENT:
 			eventChan, errChan := s.db.Event(tenant).FindOneById(req.EntityId)
 			select {
 			case event := <-eventChan:
@@ -78,7 +78,7 @@ func (s *ActionsService) React(ctx context.Context, req *pb.ReactRequest) (*pb.S
 				logger.Error("Probably event not found", zap.Error(err))
 				return nil, err
 			}
-		case pb.EntityTypes_COMMENT:
+		case socialPb.EntityTypes_COMMENT:
 			commentChan, errChan := s.db.Comment(tenant).FindOneById(req.EntityId)
 			select {
 			case comment := <-commentChan:
@@ -100,11 +100,11 @@ func (s *ActionsService) React(ctx context.Context, req *pb.ReactRequest) (*pb.S
 		logger.Error("Failed saving reaction", zap.Error(err))
 		return nil, err
 	default:
-		return &pb.SocialStatusResponse{Status: "success"}, nil
+		return &socialPb.SocialStatusResponse{Status: "success"}, nil
 	}
 }
 
-func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb.SocialStatusResponse, error) {
+func (s *ActionsService) UnReact(ctx context.Context, req *socialPb.ReactRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	reactionResChan, errResChan := s.db.React(tenant).FindOneById(userId + "/" + req.EntityId)
@@ -122,7 +122,7 @@ func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb
 
 		if err != nil {
 			logger.Error("Error deleting reaction", zap.Error(err))
-			return &pb.SocialStatusResponse{Status: "fail"}, err
+			return &socialPb.SocialStatusResponse{Status: "fail"}, err
 		}
 
 	case err := <-errResChan:
@@ -132,7 +132,7 @@ func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb
 
 	// decrement numReacts of the entity
 	switch reactionModel.ReactionOn {
-	case pb.EntityTypes_POST.String():
+	case socialPb.EntityTypes_POST.String():
 		feedPostChan, errChan := s.db.FeedPost(tenant).FindOneById(reactionModel.EntityId)
 		select {
 		case feedPost := <-feedPostChan:
@@ -142,7 +142,7 @@ func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb
 			logger.Error("Probably post not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_EVENT.String():
+	case socialPb.EntityTypes_EVENT.String():
 		eventChan, errChan := s.db.Event(tenant).FindOneById(req.EntityId)
 		select {
 		case event := <-eventChan:
@@ -152,7 +152,7 @@ func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb
 			logger.Error("Probably event not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_COMMENT.String():
+	case socialPb.EntityTypes_COMMENT.String():
 		commentChan, errChan := s.db.Comment(tenant).FindOneById(req.EntityId)
 		select {
 		case comment := <-commentChan:
@@ -164,10 +164,10 @@ func (s *ActionsService) UnReact(ctx context.Context, req *pb.ReactRequest) (*pb
 		}
 	}
 
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *ActionsService) Comment(ctx context.Context, req *pb.CommentRequest) (*pb.CommentProto, error) {
+func (s *ActionsService) Comment(ctx context.Context, req *socialPb.CommentRequest) (*socialPb.CommentProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	commentModel := s.db.Comment(tenant).GetModel(req)
 
@@ -176,7 +176,7 @@ func (s *ActionsService) Comment(ctx context.Context, req *pb.CommentRequest) (*
 
 	//update the numReplies of the parent
 	switch req.CommentOn {
-	case pb.EntityTypes_POST:
+	case socialPb.EntityTypes_POST:
 		feedPostChan, errChan := s.db.FeedPost(tenant).FindOneById(req.ParentId)
 		select {
 		case feedPost := <-feedPostChan:
@@ -186,7 +186,7 @@ func (s *ActionsService) Comment(ctx context.Context, req *pb.CommentRequest) (*
 			logger.Error("Probably post not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_EVENT:
+	case socialPb.EntityTypes_EVENT:
 		eventChan, errChan := s.db.Event(tenant).FindOneById(req.ParentId)
 		select {
 		case event := <-eventChan:
@@ -196,7 +196,7 @@ func (s *ActionsService) Comment(ctx context.Context, req *pb.CommentRequest) (*
 			logger.Error("Probably event not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_COMMENT:
+	case socialPb.EntityTypes_COMMENT:
 		commentChan, errChan := s.db.Comment(tenant).FindOneById(req.ParentId)
 		select {
 		case comment := <-commentChan:
@@ -210,17 +210,18 @@ func (s *ActionsService) Comment(ctx context.Context, req *pb.CommentRequest) (*
 
 	commentAsyncSaveRequest := s.db.Comment(tenant).Save(commentModel)
 	<-commentAsyncSaveRequest
-	commentProto := &pb.CommentProto{}
+	commentProto := &socialPb.CommentProto{}
 	copier.Copy(commentProto, commentModel)
 	return commentProto, nil
 }
 
 // TODO: delete nested comments, write extension for delete
-func (s *ActionsService) DeleteComment(ctx context.Context, req *pb.IdRequest) (*pb.SocialStatusResponse, error) {
+func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequest) (*socialPb.SocialStatusResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
 	commentResChan, errResChan := s.db.Comment(tenant).FindOneById(req.Id)
 	comment := &models.CommentModel{}
+
 	//mark comment as deleted
 	select {
 	case comment = <-commentResChan:
@@ -230,9 +231,10 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *pb.IdRequest) (
 		logger.Error("Probably comment not found", zap.Error(err))
 		return nil, err
 	}
+
 	//reduce numReplies of parent
 	switch comment.CommentOn {
-	case pb.EntityTypes_POST.String():
+	case socialPb.EntityTypes_POST.String():
 		feedPostChan, errChan := s.db.FeedPost(tenant).FindOneById(comment.ParentId)
 		select {
 		case feedPost := <-feedPostChan:
@@ -242,7 +244,7 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *pb.IdRequest) (
 			logger.Error("Probably post not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_EVENT.String():
+	case socialPb.EntityTypes_EVENT.String():
 		eventChan, errChan := s.db.Event(tenant).FindOneById(comment.ParentId)
 		select {
 		case event := <-eventChan:
@@ -252,7 +254,7 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *pb.IdRequest) (
 			logger.Error("Probably event not found", zap.Error(err))
 			return nil, err
 		}
-	case pb.EntityTypes_COMMENT.String():
+	case socialPb.EntityTypes_COMMENT.String():
 		commentChan, errChan := s.db.Comment(tenant).FindOneById(comment.ParentId)
 		select {
 		case comment := <-commentChan:
@@ -263,19 +265,20 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *pb.IdRequest) (
 			return nil, err
 		}
 	}
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-// TODO: fetch nested comments
-func (s *ActionsService) FetchComments(ctx context.Context, req *pb.CommentFetchRequest) (*pb.CommentsFetchResponse, error) {
+// TODO: fetch nested comments, write extension for fetch
+func (s *ActionsService) FetchComments(ctx context.Context, req *socialPb.CommentFetchRequest) (*socialPb.CommentsFetchResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	comments := s.db.Comment(tenant).GetComments(req.ParentId, int64(req.PageNumber), int64(req.PageSize))
-	commentProtos := []*pb.CommentProto{}
+	commentProtos := []*socialPb.CommentProto{}
 	copier.Copy(&commentProtos, &comments)
 
-	response := &pb.CommentsFetchResponse{Comments: commentProtos, PageNumber: req.PageNumber, PageSize: req.PageSize}
+	response := &socialPb.CommentsFetchResponse{Comments: commentProtos, PageNumber: req.PageNumber, PageSize: req.PageSize}
 
-	addUserInfoActionsPromises := funk.Map(response.Comments, func(x *pb.CommentProto) chan bool {
+	addUserInfoActionsPromises := funk.Map(response.Comments, func(x *socialPb.CommentProto) chan bool {
 		return extensions.AttachCommentUserInfoAsync(s.db, ctx, x, userId, tenant, "default")
 	}).([]chan bool)
 	for _, promise := range addUserInfoActionsPromises {
@@ -284,7 +287,7 @@ func (s *ActionsService) FetchComments(ctx context.Context, req *pb.CommentFetch
 	return response, nil
 }
 
-func (s *ActionsService) FetchCommentById(ctx context.Context, req *pb.IdRequest) (*pb.CommentProto, error) {
+func (s *ActionsService) FetchCommentById(ctx context.Context, req *socialPb.IdRequest) (*socialPb.CommentProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	filter := bson.M{
 		"_id":       req.Id,
@@ -293,7 +296,7 @@ func (s *ActionsService) FetchCommentById(ctx context.Context, req *pb.IdRequest
 	commentResChan, errChan := s.db.Comment(tenant).FindOne(filter)
 	select {
 	case comment := <-commentResChan:
-		commentProto := &pb.CommentProto{}
+		commentProto := &socialPb.CommentProto{}
 		copier.Copy(commentProto, comment)
 		<-extensions.AttachCommentUserInfoAsync(s.db, ctx, commentProto, userId, tenant, "default")
 		return commentProto, nil

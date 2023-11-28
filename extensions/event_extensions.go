@@ -4,20 +4,20 @@ import (
 	"context"
 
 	"github.com/Kotlang/socialGo/db"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/logger"
+	"github.com/thoas/go-funk"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
 )
 
-// Adds additional userProfile data, comments/answers to feedEvent parameter.
+// AttachEventInfoAsync attaches event reaction info to the event proto.
 func AttachEventInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
-	feedEvent *pb.EventProto,
+	feedEvent *socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
-
-	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedEvent", feedEvent))
 
 	done := make(chan bool)
 
@@ -29,8 +29,51 @@ func AttachEventInfoAsync(
 	return done
 }
 
-func GetSubscribedPostIds(db db.SocialDbInterface, tenant string, subscriberId string) chan []string {
-	postIds := make(chan []string)
+// AttachMultipleEventInfoAsync attaches event reaction info to multiple event proto.
+func AttachMultipleEventInfoAsync(
+	socialDb *db.SocialDb,
+	grpcContext context.Context,
+	feedEvents []*socialPb.EventProto,
+	userId, tenant, userType string) chan bool {
+
+	done := make(chan bool)
+
+	eventIds := funk.Map(feedEvents, func(feedEvent *socialPb.EventProto) string {
+		return userId + "/" + feedEvent.EventId
+	}).([]string)
+
+	go func() {
+		filter := bson.M{
+			"_id": bson.M{
+				"$in": eventIds,
+			},
+		}
+
+		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
+
+		select {
+		case reactions := <-reactionResChan:
+			for _, reaction := range reactions {
+				for _, feedEvent := range feedEvents {
+					if feedEvent.EventId == reaction.EntityId {
+						feedEvent.FeedUserReactions = reaction.Reaction
+					}
+				}
+			}
+		case err := <-errChan:
+			if err != nil && err != mongo.ErrNoDocuments {
+				logger.Error("Error while fetching reactions", zap.Error(err))
+			}
+			logger.Info("No reactions found")
+		}
+		done <- true
+	}()
+	return done
+}
+
+// GetSubscribedEventIds returns the list of subscribed event ids for the given user
+func GetSubscribedEventIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+	eventIds := make(chan []string)
 
 	go func() {
 		subscribeFilters := bson.M{}
@@ -42,25 +85,25 @@ func GetSubscribedPostIds(db db.SocialDbInterface, tenant string, subscriberId s
 		case subscribeCount := <-subscribeCountChan:
 			count = subscribeCount
 		case err := <-errChan:
-			logger.Error("Failed getting subscribed post count", zap.Error(err))
-			postIds <- []string{}
+			logger.Error("Failed getting subscribed event count", zap.Error(err))
+			eventIds <- []string{}
 			return
 		}
 
 		subscribeEventChan, errChan := db.EventSubscribe(tenant).Find(subscribeFilters, bson.D{}, count, 0)
-		subscribedPostIds := []string{}
+		subscribedeventIds := []string{}
 		select {
-		case subscribedPosts := <-subscribeEventChan:
-			for _, subscribedPosts := range subscribedPosts {
-				subscribedPostIds = append(subscribedPostIds, subscribedPosts.EventId)
+		case subscribedevents := <-subscribeEventChan:
+			for _, subscribedevents := range subscribedevents {
+				subscribedeventIds = append(subscribedeventIds, subscribedevents.EventId)
 			}
-			postIds <- subscribedPostIds
+			eventIds <- subscribedeventIds
 		case err := <-errChan:
 			logger.Error("Failed getting subscribed events", zap.Error(err))
-			postIds <- []string{}
+			eventIds <- []string{}
 			return
 		}
 	}()
 
-	return postIds
+	return eventIds
 }

@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/Kotlang/socialGo/db"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 )
 
 type SocialStatsService struct {
-	pb.UnimplementedSocialStatsServer
+	socialPb.UnimplementedSocialStatsServer
 	db *db.SocialDb
 }
 
@@ -19,7 +19,7 @@ func NewSocialStatsService(db *db.SocialDb) *SocialStatsService {
 	}
 }
 
-func (s *SocialStatsService) GetStats(ctx context.Context, req *pb.GetStatsRequest) (*pb.GetStatsResponse, error) {
+func (s *SocialStatsService) GetStats(ctx context.Context, req *socialPb.GetStatsRequest) (*socialPb.GetStatsResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	if len(req.UserId) > 0 {
@@ -28,7 +28,7 @@ func (s *SocialStatsService) GetStats(ctx context.Context, req *pb.GetStatsReque
 
 	stats := s.db.SocialStats(tenant).GetStats(userId)
 
-	return &pb.GetStatsResponse{
+	return &socialPb.GetStatsResponse{
 		PostsCount:     stats.Posts,
 		FollowersCount: stats.Followers,
 		FollowingCount: stats.Following,

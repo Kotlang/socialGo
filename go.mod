@@ -61,5 +61,3 @@ require (
 	google.golang.org/genproto v0.0.0-20210126160654-44e461bb6506 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 )
-
- replace github.com/SaiNageswarS/go-api-boot v0.1.33 => ../go-api-boot

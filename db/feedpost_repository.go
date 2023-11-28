@@ -1,7 +1,7 @@
 package db
 
 import (
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/odm"
@@ -18,7 +18,7 @@ type FeedPostRepository struct {
 }
 
 func (r *FeedPostRepository) GetFeed(
-	feedFilters *pb.FeedFilters,
+	feedFilters *socialPb.FeedFilters,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
 	filters := bson.M{}
@@ -37,11 +37,13 @@ func (r *FeedPostRepository) GetFeed(
 		filters["userId"] = feedFilters.CreatedBy
 	}
 
+	filters["isDeleted"] = false
+
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},
 		{Key: "numShares", Value: -1},
 		{Key: "numReplies", Value: -1},
-		{Key: "numLikes", Value: -1},
+		{Key: "numReacts", Value: -1},
 	}
 
 	skip := pageNumber * pageSize

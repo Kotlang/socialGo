@@ -5,6 +5,7 @@ type SocialStatsModel struct {
 	Followers int32  `json:"followers" bson:"followers"`
 	Following int32  `json:"following" bson:"following"`
 	Posts     int32  `json:"posts" bson:"posts"`
+	Events    int32  `json:"events" bson:"events"`
 }
 
 func (p *SocialStatsModel) Id() string {
