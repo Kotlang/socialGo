@@ -3,7 +3,7 @@ package db
 import (
 	"time"
 
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/odm"
@@ -16,7 +16,7 @@ type EventRepository struct {
 }
 
 func (r *EventRepository) GetEventFeed(
-	eventStatus pb.EventStatus,
+	eventStatus socialPb.EventStatus,
 	eventIds []string,
 	pageNumber, pageSize int64) []models.EventModel {
 
@@ -27,12 +27,12 @@ func (r *EventRepository) GetEventFeed(
 		filters["_id"] = bson.M{"$in": eventIds}
 	}
 
-	if pb.EventStatus_PAST == eventStatus {
+	if socialPb.EventStatus_PAST == eventStatus {
 		filters["endAt"] = bson.M{"$lt": now}
-	} else if pb.EventStatus_ONGOING == eventStatus {
+	} else if socialPb.EventStatus_ONGOING == eventStatus {
 		filters["startAt"] = bson.M{"$lt": now}
 		filters["endAt"] = bson.M{"$gt": now}
-	} else if pb.EventStatus_FUTURE == eventStatus {
+	} else if socialPb.EventStatus_FUTURE == eventStatus {
 		filters["startAt"] = bson.M{"$gt": now}
 	}
 	filters["isDeleted"] = false

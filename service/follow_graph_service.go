@@ -5,7 +5,7 @@ import (
 
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"google.golang.org/grpc/codes"
@@ -13,7 +13,7 @@ import (
 )
 
 type FollowGraphService struct {
-	pb.UnimplementedFollowGraphServer
+	socialPb.UnimplementedFollowGraphServer
 	db *db.SocialDb
 }
 
@@ -23,7 +23,7 @@ func NewFollowGraphService(db *db.SocialDb) *FollowGraphService {
 	}
 }
 
-func (s *FollowGraphService) FollowUser(ctx context.Context, req *pb.FollowUserRequest) (*pb.SocialStatusResponse, error) {
+func (s *FollowGraphService) FollowUser(ctx context.Context, req *socialPb.FollowUserRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	// save follower. userId is the follower.
@@ -34,7 +34,7 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *pb.FollowUserR
 
 	// check if follow relationship already exists.
 	if s.db.FollowersList(tenant).IsExistsById(followerModel.Id()) {
-		return &pb.SocialStatusResponse{Status: "ALREADY_FOLLOWING"}, nil
+		return &socialPb.SocialStatusResponse{Status: "ALREADY_FOLLOWING"}, nil
 	}
 
 	err := <-s.db.FollowersList(tenant).Save(followerModel)
@@ -49,10 +49,10 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *pb.FollowUserR
 	<-followerCountPromise
 	<-followsCountPromise
 
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *FollowGraphService) UnfollowUser(ctx context.Context, req *pb.UnFollowUserRequest) (*pb.SocialStatusResponse, error) {
+func (s *FollowGraphService) UnfollowUser(ctx context.Context, req *socialPb.UnFollowUserRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	// save follower. userId is the follower.
@@ -63,7 +63,7 @@ func (s *FollowGraphService) UnfollowUser(ctx context.Context, req *pb.UnFollowU
 
 	// check if follow relationship already exists.
 	if !s.db.FollowersList(tenant).IsExistsById(followerModel.Id()) {
-		return &pb.SocialStatusResponse{Status: "NOT_FOLLOWING"}, nil
+		return &socialPb.SocialStatusResponse{Status: "NOT_FOLLOWING"}, nil
 	}
 
 	err := <-s.db.FollowersList(tenant).DeleteById(followerModel.Id())
@@ -78,10 +78,10 @@ func (s *FollowGraphService) UnfollowUser(ctx context.Context, req *pb.UnFollowU
 	<-followerCountPromise
 	<-followsCountPromise
 
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *FollowGraphService) GetFollowers(ctx context.Context, req *pb.GetFollowersRequest) (*pb.GetFollowersResponse, error) {
+func (s *FollowGraphService) GetFollowers(ctx context.Context, req *socialPb.GetFollowersRequest) (*socialPb.GetFollowersResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	if len(req.UserId) > 0 {
@@ -95,10 +95,10 @@ func (s *FollowGraphService) GetFollowers(ctx context.Context, req *pb.GetFollow
 	followerIds := s.db.FollowersList(tenant).GetFollowers(userId, int64(req.PageNumber), int64(req.PageSize))
 	followers := <-extensions.GetSocialProfiles(ctx, followerIds)
 
-	return &pb.GetFollowersResponse{Followers: followers}, nil
+	return &socialPb.GetFollowersResponse{Followers: followers}, nil
 }
 
-func (s *FollowGraphService) GetFollowing(ctx context.Context, req *pb.GetFollowingRequest) (*pb.GetFollowingResponse, error) {
+func (s *FollowGraphService) GetFollowing(ctx context.Context, req *socialPb.GetFollowingRequest) (*socialPb.GetFollowingResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	if len(req.UserId) > 0 {
@@ -112,10 +112,10 @@ func (s *FollowGraphService) GetFollowing(ctx context.Context, req *pb.GetFollow
 	followingIds := s.db.FollowersList(tenant).GetFollowing(userId, int64(req.PageNumber), int64(req.PageSize))
 	following := <-extensions.GetSocialProfiles(ctx, followingIds)
 
-	return &pb.GetFollowingResponse{Following: following}, nil
+	return &socialPb.GetFollowingResponse{Following: following}, nil
 }
 
-func (s *FollowGraphService) IsFollowing(ctx context.Context, req *pb.IsFollowingRequest) (*pb.IsFollowingResponse, error) {
+func (s *FollowGraphService) IsFollowing(ctx context.Context, req *socialPb.IsFollowingRequest) (*socialPb.IsFollowingResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
 	followerModel := &models.FollowersListModel{
@@ -124,5 +124,5 @@ func (s *FollowGraphService) IsFollowing(ctx context.Context, req *pb.IsFollowin
 	}
 
 	isExists := s.db.FollowersList(tenant).IsExistsById(followerModel.Id())
-	return &pb.IsFollowingResponse{IsFollowing: isExists}, nil
+	return &socialPb.IsFollowingResponse{IsFollowing: isExists}, nil
 }

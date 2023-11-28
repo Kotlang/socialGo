@@ -1,7 +1,7 @@
 package db
 
 import (
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/odm"
@@ -14,7 +14,7 @@ type FeedPostRepository struct {
 }
 
 func (r *FeedPostRepository) GetFeed(
-	feedFilters *pb.FeedFilters,
+	feedFilters *socialPb.FeedFilters,
 	pageNumber, pageSize int64) []models.FeedPostModel {
 
 	filters := bson.M{}

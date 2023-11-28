@@ -9,7 +9,8 @@ import (
 
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
-	pb "github.com/Kotlang/socialGo/generated"
+	notificationPb "github.com/Kotlang/socialGo/generated/notification"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	s3client "github.com/Kotlang/socialGo/s3Client"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/azure"
@@ -23,7 +24,7 @@ import (
 )
 
 type FeedpostService struct {
-	pb.UnimplementedUserPostServer
+	socialPb.UnimplementedUserPostServer
 	db *db.SocialDb
 }
 
@@ -33,7 +34,7 @@ func NewFeedpostService(db *db.SocialDb) *FeedpostService {
 	}
 }
 
-func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostProto, error) {
+func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPostRequest) (*socialPb.UserPostProto, error) {
 	err := ValidateUserPostRequest(req)
 	if err != nil {
 		return nil, err
@@ -67,12 +68,12 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 
 	select {
 	case feedPostModel := <-feedPostModelChan:
-		res := &pb.UserPostProto{}
+		res := &socialPb.UserPostProto{}
 		copier.Copy(res, feedPostModel)
 
 		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
-		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
+		err := <-extensions.RegisterEvent(ctx, &notificationPb.RegisterEventRequest{
 			EventType: "post.created",
 			TemplateParameters: map[string]string{
 				"postId": feedPostModel.PostId,
@@ -93,9 +94,9 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *pb.UserPostReques
 	}
 }
 
-func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (*pb.UserPostProto, error) {
+func (s *FeedpostService) GetPost(ctx context.Context, req *socialPb.GetPostRequest) (*socialPb.UserPostProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	postProto := pb.UserPostProto{}
+	postProto := socialPb.UserPostProto{}
 
 	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.PostId)
 	select {
@@ -109,7 +110,7 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *pb.GetPostRequest) (
 	return &postProto, nil
 }
 
-func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (*pb.FeedResponse, error) {
+func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequest) (*socialPb.FeedResponse, error) {
 	// logger.Info("GetFeed", zap.Any("req", req))
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
@@ -128,12 +129,12 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 		int64(req.PageNumber),
 		int64(req.PageSize))
 
-	feedProto := []*pb.UserPostProto{}
+	feedProto := []*socialPb.UserPostProto{}
 	copier.Copy(&feedProto, feed)
 
-	response := &pb.FeedResponse{Posts: feedProto}
+	response := &socialPb.FeedResponse{Posts: feedProto}
 
-	addUserPostActionsPromises := funk.Map(response.Posts, func(x *pb.UserPostProto) chan bool {
+	addUserPostActionsPromises := funk.Map(response.Posts, func(x *socialPb.UserPostProto) chan bool {
 		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default")
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
@@ -143,27 +144,27 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *pb.GetFeedRequest) (
 	return response, nil
 }
 
-func (s *FeedpostService) GetTags(ctx context.Context, req *pb.GetTagsRequest) (*pb.TagListResponse, error) {
+func (s *FeedpostService) GetTags(ctx context.Context, req *socialPb.GetTagsRequest) (*socialPb.TagListResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
 	tags := s.db.Tag(tenant).FindTagsRanked()
 
-	res := &pb.TagListResponse{}
+	res := &socialPb.TagListResponse{}
 	copier.Copy(&res.Tags, tags)
 
 	return res, nil
 }
 
-func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *pb.MediaUploadRequest) (*pb.MediaUploadURL, error) {
+func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *socialPb.MediaUploadRequest) (*socialPb.MediaUploadURL, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	uploadUrl, downloadUrl := s3client.GetPresignedUrlForPosts(tenant, userId, req.MediaExtension)
-	return &pb.MediaUploadURL{
+	return &socialPb.MediaUploadURL{
 		UploadUrl: uploadUrl,
 		MediaUrl:  downloadUrl,
 	}, nil
 }
 
-func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServer) error {
+func (s *FeedpostService) UploadPostMedia(stream socialPb.UserPost_UploadPostMediaServer) error {
 	userId, tenant := auth.GetUserIdAndTenant(stream.Context())
 	logger.Info("Uploading post media", zap.String("userId", userId), zap.String("tenant", tenant))
 	maxFileSize := 50 * 1024 * 1024
@@ -197,7 +198,7 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 	uploadPathChan, errChan := azure.Storage.UploadStream("social-posts", path, imageData)
 	select {
 	case uploadPath := <-uploadPathChan:
-		stream.SendAndClose(&pb.UploadPostMediaResponse{UploadPath: uploadPath})
+		stream.SendAndClose(&socialPb.UploadPostMediaResponse{UploadPath: uploadPath})
 		return nil
 	case err := <-errChan:
 		logger.Error("Failed uploading media image.", zap.Error(err))
@@ -205,7 +206,7 @@ func (s *FeedpostService) UploadPostMedia(stream pb.UserPost_UploadPostMediaServ
 	}
 }
 
-func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequest) (*pb.SocialStatusResponse, error) {
+func (s *FeedpostService) DeletePost(ctx context.Context, req *socialPb.DeletePostRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.Id)
@@ -223,21 +224,21 @@ func (s *FeedpostService) DeletePost(ctx context.Context, req *pb.DeletePostRequ
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	} else {
-		return &pb.SocialStatusResponse{
+		return &socialPb.SocialStatusResponse{
 			Status: "success",
 		}, nil
 	}
 }
 
-func (s *FeedpostService) ParsePost(ctx context.Context, req *pb.UserPostRequest) (*pb.UserPostRequest, error) {
+func (s *FeedpostService) ParsePost(ctx context.Context, req *socialPb.UserPostRequest) (*socialPb.UserPostRequest, error) {
 	links := <-extensions.GetLinks(req.Post)
 
-	links = append(links, funk.Map(req.MediaUrls, func(x *pb.MediaUrl) string { return x.Url }).([]string)...)
+	links = append(links, funk.Map(req.MediaUrls, func(x *socialPb.MediaUrl) string { return x.Url }).([]string)...)
 	links = funk.UniqString(links)
 	mediaUrlsChan, webPreviewsChan := extensions.GeneratePreviews(links)
 
 	mediaUrls := <-mediaUrlsChan
-	newUserPost := &pb.UserPostRequest{}
+	newUserPost := &socialPb.UserPostRequest{}
 	copier.CopyWithOption(newUserPost, req, copier.Option{
 		DeepCopy: true,
 	})

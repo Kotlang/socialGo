@@ -5,7 +5,8 @@ import (
 	"os"
 	"sync"
 
-	pb "github.com/Kotlang/socialGo/generated"
+	authPb "github.com/Kotlang/socialGo/generated/auth"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
 	"github.com/thoas/go-funk"
@@ -42,8 +43,8 @@ func (c *AuthClient) getConnection() *grpc.ClientConn {
 	return c.cached_conn
 }
 
-func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb.SocialProfile {
-	result := make(chan []*pb.SocialProfile)
+func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*socialPb.SocialProfile {
+	result := make(chan []*socialPb.SocialProfile)
 
 	go func() {
 		if len(userIds) == 0 {
@@ -60,7 +61,7 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 			return
 		}
 
-		client := pb.NewProfileClient(conn)
+		client := authPb.NewProfileClient(conn)
 
 		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
@@ -68,7 +69,7 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 			return
 		}
 
-		userIdList := &pb.BulkGetProfileRequest{
+		userIdList := &authPb.BulkGetProfileRequest{
 			UserIds: userIds,
 		}
 
@@ -80,14 +81,14 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 			return
 		}
 
-		authorProfiles := funk.Map(resp.Profiles, func(profile *pb.UserProfileProto) *pb.SocialProfile {
-			return &pb.SocialProfile{
+		authorProfiles := funk.Map(resp.Profiles, func(profile *authPb.UserProfileProto) *socialPb.SocialProfile {
+			return &socialPb.SocialProfile{
 				Name:       profile.Name,
 				PhotoUrl:   profile.PhotoUrl,
 				Occupation: "farmer",
 				UserId:     profile.LoginId,
 			}
-		}).([]*pb.SocialProfile)
+		}).([]*socialPb.SocialProfile)
 
 		result <- authorProfiles
 	}()
@@ -95,8 +96,8 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*pb
 	return result
 }
 
-func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.SocialProfile {
-	result := make(chan *pb.SocialProfile)
+func GetSocialProfile(grpcContext context.Context, userId string) chan *socialPb.SocialProfile {
+	result := make(chan *socialPb.SocialProfile)
 
 	go func() {
 		conn := auth_client.getConnection()
@@ -105,7 +106,7 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.Socia
 			return
 		}
 
-		client := pb.NewProfileClient(conn)
+		client := authPb.NewProfileClient(conn)
 
 		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
@@ -115,14 +116,14 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *pb.Socia
 
 		resp, err := client.GetProfileById(
 			ctx,
-			&pb.GetProfileRequest{UserId: userId})
+			&authPb.GetProfileRequest{UserId: userId})
 		if err != nil {
 			logger.Error("Failed getting user profile", zap.Error(err))
 			result <- nil
 			return
 		}
 
-		result <- &pb.SocialProfile{
+		result <- &socialPb.SocialProfile{
 			Name:       resp.Name,
 			PhotoUrl:   resp.PhotoUrl,
 			Occupation: "farmer",

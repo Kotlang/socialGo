@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"github.com/Kotlang/socialGo/db"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 )
 
 func AttachCommentUserInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
-	comment *pb.CommentProto,
+	comment *socialPb.CommentProto,
 	userId, tenant, userType string) chan bool {
 
 	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedPost", feedPost))

@@ -7,7 +7,8 @@ import (
 
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
-	pb "github.com/Kotlang/socialGo/generated"
+	notificationsPb "github.com/Kotlang/socialGo/generated/notification"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
@@ -20,7 +21,7 @@ import (
 )
 
 type EventService struct {
-	pb.UnimplementedEventsServer
+	socialPb.UnimplementedEventsServer
 	db *db.SocialDb
 }
 
@@ -30,7 +31,7 @@ func NewEventService(db *db.SocialDb) *EventService {
 	}
 }
 
-func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventRequest) (*pb.EventProto, error) {
+func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEventRequest) (*socialPb.EventProto, error) {
 	err := ValidateEventRequest(req)
 	if err != nil {
 		return nil, err
@@ -63,13 +64,13 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 
 	select {
 	case eventModel := <-eventModelChan:
-		res := &pb.EventProto{}
+		res := &socialPb.EventProto{}
 		copier.Copy(res, eventModel)
 
 		//populate hasUserReacted field
 		attachAuthorInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
-		err := <-extensions.RegisterEvent(ctx, &pb.RegisterEventRequest{
+		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
 				"postId": eventModel.EventId,
@@ -90,7 +91,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *pb.CreateEventReque
 	}
 }
 
-func (s *EventService) DeleteEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.SocialStatusResponse, error) {
+func (s *EventService) DeleteEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.SocialStatusResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
@@ -106,12 +107,12 @@ func (s *EventService) DeleteEvent(ctx context.Context, req *pb.EventIdRequest) 
 	//TODO: Add field event to socialStatsModel and decrement eventsCount
 	//TODO: Delete all the comments and likes on the event
 
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
-func (s *EventService) GetEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.EventProto, error) {
+func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.EventProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	EventProto := pb.EventProto{}
+	EventProto := socialPb.EventProto{}
 
 	filters := bson.M{}
 	filters["_id"] = req.EventId
@@ -131,7 +132,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *pb.EventIdRequest) (*p
 	return &EventProto, nil
 }
 
-func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedRequest) (*pb.EventFeedResponse, error) {
+func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventFeedRequest) (*socialPb.EventFeedResponse, error) {
 
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
@@ -139,13 +140,13 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	}
 	logger.Info("Getting feed for ", zap.String("feedType", req.Filters.EventStatus.String()))
 
-	eventStatus := pb.EventStatus_FUTURE
+	eventStatus := socialPb.EventStatus_FUTURE
 	eventIds := []string{}
 	if req.Filters != nil {
 		if req.Filters.GetSubscribedEvents {
 			eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
 			if len(eventIds) == 0 {
-				return &pb.EventFeedResponse{Events: []*pb.EventProto{}}, nil
+				return &socialPb.EventFeedResponse{Events: []*socialPb.EventProto{}}, nil
 			}
 		}
 		eventStatus = req.Filters.EventStatus
@@ -157,13 +158,13 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 		int64(req.PageNumber),
 		int64(req.PageSize))
 
-	feedProto := []*pb.EventProto{}
+	feedProto := []*socialPb.EventProto{}
 	copier.Copy(&feedProto, feed)
-	response := &pb.EventFeedResponse{Events: feedProto}
+	response := &socialPb.EventFeedResponse{Events: feedProto}
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 
-	addUserPostActionsPromises := funk.Map(response.Events, func(x *pb.EventProto) chan bool {
+	addUserPostActionsPromises := funk.Map(response.Events, func(x *socialPb.EventProto) chan bool {
 		return extensions.AttachEventInfoAsync(s.db, ctx, x, userId, tenant, "default")
 	}).([]chan bool)
 	for _, promise := range addUserPostActionsPromises {
@@ -173,7 +174,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *pb.GetEventFeedReq
 	return response, nil
 }
 
-func (s *EventService) SubscribeEvent(ctx context.Context, req *pb.EventIdRequest) (*pb.SocialStatusResponse, error) {
+func (s *EventService) SubscribeEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	eventSubscribeModel := s.db.EventSubscribe(tenant).GetModel(req)
 	eventSubscribeModel.UserId = userId
@@ -181,7 +182,7 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *pb.EventIdReques
 	isExistsById := s.db.EventSubscribe(tenant).IsExistsById(eventSubscribeModel.Id())
 
 	if isExistsById {
-		return &pb.SocialStatusResponse{Status: "success"}, nil
+		return &socialPb.SocialStatusResponse{Status: "success"}, nil
 	}
 
 	err := <-s.db.EventSubscribe(tenant).Save(eventSubscribeModel)
@@ -191,5 +192,5 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *pb.EventIdReques
 		return nil, status.Error(codes.Internal, err.Error())
 
 	}
-	return &pb.SocialStatusResponse{Status: "success"}, nil
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }

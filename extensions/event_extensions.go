@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/Kotlang/socialGo/db"
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 func AttachEventInfoAsync(
 	socialDb *db.SocialDb,
 	grpcContext context.Context,
-	feedEvent *pb.EventProto,
+	feedEvent *socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
 
 	// logger.Info("AttachPostUserInfoAsync", zap.Any("feedEvent", feedEvent))
