@@ -35,7 +35,7 @@ func (r *FeedPostRepository) GetFeed(
 		{Key: "createdOn", Value: -1},
 		{Key: "numShares", Value: -1},
 		{Key: "numReplies", Value: -1},
-		{Key: "numLikes", Value: -1},
+		{Key: "numReacts", Value: -1},
 	}
 
 	skip := pageNumber * pageSize

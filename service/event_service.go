@@ -12,7 +12,6 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
-	"github.com/thoas/go-funk"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
@@ -52,13 +51,13 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	// save tags.
 	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
 
-	//TODO: Add field event to socialStatsModel and increment eventsCount
-	// savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
+	// update event count in social stats.
+	saveEventCountPromise := s.db.SocialStats(tenant).UpdateEventCount(userId, 1)
 
 	// wait for async operations to finish.
 	<-saveEventPromise
 	<-saveTagsPromise
-	// <-savePostCountPromise
+	<-saveEventCountPromise
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(eventModel.EventId)
 
@@ -68,7 +67,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		copier.Copy(res, eventModel)
 
 		//populate hasUserReacted field
-		attachAuthorInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
+		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
@@ -84,7 +83,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 			logger.Error("Failed to register event", zap.Error(err))
 		}
 
-		<-attachAuthorInfoPromise
+		<-attachEventInfoPromise
 		return res, nil
 	case err := <-errChan:
 		return nil, status.Error(codes.Internal, err.Error())
@@ -92,7 +91,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 }
 
 func (s *EventService) DeleteEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.SocialStatusResponse, error) {
-	_, tenant := auth.GetUserIdAndTenant(ctx)
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
 	select {
@@ -104,8 +103,9 @@ func (s *EventService) DeleteEvent(ctx context.Context, req *socialPb.EventIdReq
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	//TODO: Add field event to socialStatsModel and decrement eventsCount
-	//TODO: Delete all the comments and likes on the event
+	// update event count in social stats.
+	saveEventCountPromise := s.db.SocialStats(tenant).UpdateEventCount(userId, -1)
+	<-saveEventCountPromise
 
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
@@ -164,12 +164,8 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 
-	addUserPostActionsPromises := funk.Map(response.Events, func(x *socialPb.EventProto) chan bool {
-		return extensions.AttachEventInfoAsync(s.db, ctx, x, userId, tenant, "default")
-	}).([]chan bool)
-	for _, promise := range addUserPostActionsPromises {
-		<-promise
-	}
+	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant, "default")
+	<-attachEventInfoPromise
 
 	return response, nil
 }

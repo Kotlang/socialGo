@@ -111,7 +111,6 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *socialPb.GetPostRequ
 }
 
 func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequest) (*socialPb.FeedResponse, error) {
-	// logger.Info("GetFeed", zap.Any("req", req))
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
 		req.PageSize = 10
@@ -134,13 +133,10 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 
 	response := &socialPb.FeedResponse{Posts: feedProto}
 
-	addUserPostActionsPromises := funk.Map(response.Posts, func(x *socialPb.UserPostProto) chan bool {
-		return extensions.AttachPostUserInfoAsync(s.db, ctx, x, userId, tenant, "default")
-	}).([]chan bool)
-	for _, promise := range addUserPostActionsPromises {
-		<-promise
-	}
-
+	attachPostInfoPromise := extensions.AttachMultiplePostUserInfoAsync(s.db, ctx, response.Posts, userId, tenant, "default")
+	<-attachPostInfoPromise
+	response.PageNumber = req.PageNumber
+	response.PageSize = req.PageSize
 	return response, nil
 }
 
