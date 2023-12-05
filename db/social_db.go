@@ -16,6 +16,15 @@ func (db *SocialDb) FeedPost(tenant string) *FeedPostRepository {
 	return &FeedPostRepository{repo}
 }
 
+func (db *SocialDb) Event(tenant string) *EventRepository {
+	repo := odm.AbstractRepository[models.EventModel]{
+		Database:       tenant + "_social",
+		CollectionName: "feed_event",
+	}
+
+	return &EventRepository{repo}
+}
+
 func (db *SocialDb) Tag(tenant string) *TagRepository {
 	repo := odm.AbstractRepository[models.PostTagModel]{
 		Database:       tenant + "_social",
@@ -24,14 +33,29 @@ func (db *SocialDb) Tag(tenant string) *TagRepository {
 
 	return &TagRepository{repo}
 }
-
-func (db *SocialDb) PostLike(tenant string) *PostLikeRepository {
-	repo := odm.AbstractRepository[models.PostLikeModel]{
+func (db *SocialDb) Comment(tenant string) *CommentRepository {
+	repo := odm.AbstractRepository[models.CommentModel]{
 		Database:       tenant + "_social",
-		CollectionName: "likes",
+		CollectionName: "comments",
+	}
+	return &CommentRepository{repo}
+}
+
+func (db *SocialDb) EventSubscribe(tenant string) *EventSubscribeRepository {
+	repo := odm.AbstractRepository[models.EventSubscribeModel]{
+		Database:       tenant + "_social",
+		CollectionName: "event_subscribe",
+	}
+	return &EventSubscribeRepository{repo}
+}
+
+func (db *SocialDb) React(tenant string) *ReactRepository {
+	repo := odm.AbstractRepository[models.ReactionModel]{
+		Database:       tenant + "_social",
+		CollectionName: "reaction",
 	}
 
-	return &PostLikeRepository{repo}
+	return &ReactRepository{repo}
 }
 
 func (db *SocialDb) FollowersList(tenant string) *FollowersListRepository {

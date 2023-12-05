@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	pb "github.com/Kotlang/socialGo/generated"
+	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/server"
 	"github.com/joho/godotenv"
@@ -32,10 +32,11 @@ func main() {
 			AllowedHeaders: []string{"*"},
 		})
 	bootServer := server.NewGoApiBoot(corsConfig)
-	pb.RegisterUserPostServer(bootServer.GrpcServer, inject.FeedPostService)
-	pb.RegisterPostActionsServer(bootServer.GrpcServer, inject.PostActionsService)
-	pb.RegisterFollowGraphServer(bootServer.GrpcServer, inject.FollowGraphService)
-	pb.RegisterSocialStatsServer(bootServer.GrpcServer, inject.SocialStatsService)
+	socialPb.RegisterUserPostServer(bootServer.GrpcServer, inject.FeedPostService)
+	socialPb.RegisterActionsServer(bootServer.GrpcServer, inject.ActionsService)
+	socialPb.RegisterFollowGraphServer(bootServer.GrpcServer, inject.FollowGraphService)
+	socialPb.RegisterSocialStatsServer(bootServer.GrpcServer, inject.SocialStatsService)
+	socialPb.RegisterEventsServer(bootServer.GrpcServer, inject.EventService)
 
 	bootServer.Start(grpcPort, webPort)
 }

@@ -28,6 +28,12 @@ func (r *SocialStatsRepository) UpdatePostCount(userId string, posts int32) chan
 	return r.Save(currentStats)
 }
 
+func (r *SocialStatsRepository) UpdateEventCount(userId string, events int32) chan error {
+	currentStats := r.GetStats(userId)
+	currentStats.Events += events
+	return r.Save(currentStats)
+}
+
 func (r *SocialStatsRepository) UpdateFollowerCount(userId string, followers int32) chan error {
 	currentStats := r.GetStats(userId)
 	currentStats.Followers += followers
