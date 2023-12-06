@@ -11,6 +11,7 @@ type SocialStatsRepositoryInterface interface {
 	UpdatePostCount(userId string, posts int32) chan error
 	UpdateFollowerCount(userId string, followers int32) chan error
 	UpdateFollowingCount(userId string, following int32) chan error
+	UpdateEventCount(userId string, events int32) chan error
 }
 
 type SocialStatsRepository struct {

@@ -31,7 +31,7 @@ func AttachEventInfoAsync(
 
 // AttachMultipleEventInfoAsync attaches event reaction info to multiple event proto.
 func AttachMultipleEventInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvents []*socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
@@ -72,7 +72,7 @@ func AttachMultipleEventInfoAsync(
 }
 
 // GetSubscribedEventIds returns the list of subscribed event ids for the given user
-func GetSubscribedEventIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+func GetSubscribedEventIds(db db.SocialDbInterface, tenant string, subscriberId string) chan []string {
 	eventIds := make(chan []string)
 
 	go func() {

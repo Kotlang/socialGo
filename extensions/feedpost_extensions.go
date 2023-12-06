@@ -62,7 +62,7 @@ func AttachPostUserInfoAsync(
 
 // Adds additional userProfile data, reactions data to multiple feedPost proto.
 func AttachMultiplePostUserInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedPosts []*socialPb.UserPostProto,
 	userId, tenant, userType string) chan bool {

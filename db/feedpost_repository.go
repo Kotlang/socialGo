@@ -11,7 +11,7 @@ import (
 
 type FeedPostRepositoryInterface interface {
 	odm.BootRepository[models.FeedPostModel]
-	GetFeed(feedFilters *pb.FeedFilters, pageNumber, pageSize int64) []models.FeedPostModel
+	GetFeed(feedFilters *socialPb.FeedFilters, pageNumber, pageSize int64) []models.FeedPostModel
 }
 type FeedPostRepository struct {
 	odm.UnimplementedBootRepository[models.FeedPostModel]

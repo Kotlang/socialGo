@@ -14,7 +14,7 @@ import (
 
 type EventRepositoryInterface interface {
 	odm.BootRepository[models.EventModel]
-	GetEventFeed(eventStatus pb.EventStatus, eventIds []string, pageNumber, pageSize int64) []models.EventModel
+	GetEventFeed(eventStatus socialPb.EventStatus, eventIds []string, pageNumber, pageSize int64) []models.EventModel
 }
 
 type EventRepository struct {
