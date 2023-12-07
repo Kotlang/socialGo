@@ -209,24 +209,29 @@ func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventReq
 	}
 
 	// Update event fields if they are present in the request
-	if len(req.Title) > 0 {
-		eventModel.Title = req.Title
+	err := copier.CopyWithOption(eventModel, req, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+	if err != nil {
+		logger.Error("Failed to copy fields to event model", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
 	}
-	if len(req.Type.String()) > 0 {
-		eventModel.Type = req.Type.String()
+
+	if req.Type != socialPb.EventType(0) {
+		switch req.Type {
+		case socialPb.EventType_ONLINE:
+			eventModel.Type = "ONLINE"
+		case socialPb.EventType_OFFLINE:
+			eventModel.Type = "OFFLINE"
+		}
 	}
-	if req.StartAt != 0 {
-		eventModel.StartAt = req.StartAt
+
+	if req.NumAttendees != 0 {
+		eventModel.NumAttendees = int64(req.NumAttendees)
 	}
-	if req.EndAt != 0 {
-		eventModel.EndAt = req.EndAt
+
+	if req.NumSlots != 0 {
+		eventModel.NumSlots = int64(req.NumSlots)
 	}
-	if len(req.OnlineLink) > 0 {
-		eventModel.OnlineLink = req.OnlineLink
-	}
-	if len(req.Description) > 0 {
-		eventModel.Description = req.Description
-	}
+
 	if len(req.MediaUrls) > 0 {
 		var mediaUrls []models.MediaUrl
 		for _, mu := range req.MediaUrls {
@@ -237,6 +242,7 @@ func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventReq
 		}
 		eventModel.MediaUrls = mediaUrls
 	}
+
 	if len(req.WebPreviews) > 0 {
 		var webPreviews []models.WebPreview
 		for _, wp := range req.WebPreviews {
@@ -249,20 +255,8 @@ func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventReq
 		}
 		eventModel.WebPreviews = webPreviews
 	}
-	if req.NumAttendees != 0 {
-		eventModel.NumAttendees = int64(req.NumAttendees)
-	}
-	if req.NumSlots != 0 {
-		eventModel.NumSlots = int64(req.NumSlots)
-	}
-	if req.Location != nil {
-		eventModel.Location = models.Location{
-			Lat:  req.Location.Lat,
-			Long: req.Location.Long,
-		}
-	}
 
-	err := <-s.db.Event(tenant).Save(eventModel)
+	err = <-s.db.Event(tenant).Save(eventModel)
 	if err != nil {
 		logger.Error("Failed to update event", zap.Error(err))
 		return nil, status.Error(codes.Internal, err.Error())
