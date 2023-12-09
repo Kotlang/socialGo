@@ -135,6 +135,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 }
 
 func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventFeedRequest) (*socialPb.EventFeedResponse, error) {
+
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
 		req.PageSize = 10
@@ -143,15 +144,9 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 
 	eventStatus := socialPb.EventStatus_FUTURE
 	eventIds := []string{}
-
 	if req.Filters != nil {
 		if req.Filters.GetSubscribedEvents {
-			// Check if the result of GetSubscribedEventIds is nil
-			subscribedEventIds := extensions.GetSubscribedEventIds(s.db, tenant, userId)
-			if subscribedEventIds != nil {
-				eventIds = <-subscribedEventIds
-			}
-
+			eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
 			if len(eventIds) == 0 {
 				return &socialPb.EventFeedResponse{Events: []*socialPb.EventProto{}}, nil
 			}
