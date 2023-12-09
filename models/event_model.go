@@ -18,8 +18,8 @@ type EventModel struct {
 	NumReacts    map[string]int64 `bson:"numReacts"`
 	NumShares    int64            `bson:"numShares"`
 	NumReplies   int64            `bson:"numReplies"`
-	NumAttendees int64            `bson:"numAttendees"`
-	NumSlots     int64            `bson:"numSlots"`
+	NumAttendees int32            `bson:"numAttendees"`
+	NumSlots     int32            `bson:"numSlots"`
 	Location     Location         `bson:"location"`
 	Language     string           `bson:"language"`
 	CreatedOn    int64            `bson:"createdOn"`

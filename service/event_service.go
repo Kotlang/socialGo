@@ -9,6 +9,7 @@ import (
 	"github.com/Kotlang/socialGo/extensions"
 	notificationsPb "github.com/Kotlang/socialGo/generated/notification"
 	socialPb "github.com/Kotlang/socialGo/generated/social"
+	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/auth"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
@@ -189,5 +190,69 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *socialPb.EventId
 		return nil, status.Error(codes.Internal, err.Error())
 
 	}
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
+}
+
+func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventRequest) (*socialPb.SocialStatusResponse, error) {
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+	// Fetch the existing event
+	eventChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
+	eventModel := s.db.Event(tenant).GetModel(req)
+
+	select {
+	case eventmodel := <-eventChan:
+		if eventmodel != nil {
+			eventModel = eventmodel
+		}
+	case err := <-errChan:
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	// Update event fields if they are present in the request
+	err := copier.CopyWithOption(eventModel, req, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+	if err != nil {
+		logger.Error("Failed to copy fields to event model", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	if req.Type != socialPb.EventType(0) {
+		switch req.Type {
+		case socialPb.EventType_ONLINE:
+			eventModel.Type = "ONLINE"
+		case socialPb.EventType_OFFLINE:
+			eventModel.Type = "OFFLINE"
+		}
+	}
+
+	if len(req.MediaUrls) > 0 {
+		var mediaUrls []models.MediaUrl
+		for _, mu := range req.MediaUrls {
+			mediaUrls = append(mediaUrls, models.MediaUrl{
+				Url:      mu.Url,
+				MimeType: mu.MimeType,
+			})
+		}
+		eventModel.MediaUrls = mediaUrls
+	}
+
+	if len(req.WebPreviews) > 0 {
+		var webPreviews []models.WebPreview
+		for _, wp := range req.WebPreviews {
+			webPreviews = append(webPreviews, models.WebPreview{
+				Title:        wp.Title,
+				PreviewImage: wp.PreviewImage,
+				Url:          wp.Url,
+				Description:  wp.Description,
+			})
+		}
+		eventModel.WebPreviews = webPreviews
+	}
+
+	err = <-s.db.Event(tenant).Save(eventModel)
+	if err != nil {
+		logger.Error("Failed to update event", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
