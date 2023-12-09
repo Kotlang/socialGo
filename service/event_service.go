@@ -47,18 +47,9 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	}
 
 	// save event
-	saveEventPromise := s.db.Event(tenant).Save(eventModel)
-	saveEventErrorChan := make(chan error)
-	go func() {
-		err := <-saveEventPromise
-
-		saveEventErrorChan <- err
-	}()
-
-	err = <-saveEventErrorChan
+	err = <-s.db.Event(tenant).Save(eventModel)
 	if err != nil {
-		logger.Error("Failed to save event", zap.Error(err))
-		return nil, status.Error(codes.Internal, "Failed to save event")
+		return nil, err
 	}
 
 	// save tags.
