@@ -7,6 +7,7 @@ import (
 
 type EventSubscribeRepositoryInterface interface {
 	odm.BootRepository[models.EventSubscribeModel]
+	IsSubscriber(userId string, eventId string) bool
 }
 
 type EventSubscribeRepository struct {
