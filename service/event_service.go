@@ -47,10 +47,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	}
 
 	// save event
-	err = <-s.db.Event(tenant).Save(eventModel)
-	if err != nil {
-		return nil, err
-	}
+	saveEventPromise := s.db.Event(tenant).Save(eventModel)
 
 	// save tags.
 	saveTagsPromise := extensions.SaveTags(s.db, tenant, req.Tags)
@@ -59,6 +56,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	saveEventCountPromise := s.db.SocialStats(tenant).UpdateEventCount(userId, 1)
 
 	// wait for async operations to finish.
+	<-saveEventPromise
 	<-saveTagsPromise
 	<-saveEventCountPromise
 
