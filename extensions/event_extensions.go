@@ -51,7 +51,7 @@ func AttachMultipleEventInfoAsync(
 		}
 
 		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
-		// subscriberResCHan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
+		subscriberResCHan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
 
 		select {
 		case reactions := <-reactionResChan:
@@ -69,21 +69,21 @@ func AttachMultipleEventInfoAsync(
 			logger.Info("No reactions found")
 		}
 
-		// select {
-		// case subscribers := <-subscriberResCHan:
-		// 	for _, subscriber := range subscribers {
-		// 		for _, feedEvent := range feedEvents {
-		// 			if feedEvent.EventId == subscriber.EventId {
-		// 				feedEvent.HasFeedUserSubscribed = true
-		// 			}
-		// 		}
-		// 	}
-		// case err := <-subscriberErrChan:
-		// 	if err != nil && err != mongo.ErrNoDocuments {
-		// 		logger.Error("Error while fetching subscribers", zap.Error(err))
-		// 	}
-		// 	logger.Info("No subscribers found")
-		// }
+		select {
+		case subscribers := <-subscriberResCHan:
+			for _, subscriber := range subscribers {
+				for _, feedEvent := range feedEvents {
+					if feedEvent.EventId == subscriber.EventId {
+						feedEvent.HasFeedUserSubscribed = true
+					}
+				}
+			}
+		case err := <-subscriberErrChan:
+			if err != nil && err != mongo.ErrNoDocuments {
+				logger.Error("Error while fetching subscribers", zap.Error(err))
+			}
+			logger.Info("No subscribers found")
+		}
 
 		done <- true
 	}()
