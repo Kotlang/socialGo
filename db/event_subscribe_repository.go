@@ -12,3 +12,8 @@ type EventSubscribeRepositoryInterface interface {
 type EventSubscribeRepository struct {
 	odm.UnimplementedBootRepository[models.EventSubscribeModel]
 }
+
+func (r *EventSubscribeRepository) IsSubscriber(userId string, eventId string) bool {
+	return r.IsExistsById(userId + "/" + eventId)
+
+}
