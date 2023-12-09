@@ -56,12 +56,15 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	saveEventCountPromise := s.db.SocialStats(tenant).UpdateEventCount(userId, 1)
 
 	// wait for async operations to finish.
-	<-saveEventPromise
+	if err := <-saveEventPromise; err != nil {
+		return nil, err
+	}
 	<-saveTagsPromise
-	<-saveEventCountPromise
+	if err := <-saveEventCountPromise; err != nil {
+		return nil, err
+	}
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(eventModel.EventId)
-
 	select {
 	case eventModel := <-eventModelChan:
 		res := &socialPb.EventProto{}
@@ -135,24 +138,24 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 }
 
 func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventFeedRequest) (*socialPb.EventFeedResponse, error) {
-
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	if req.PageSize == 0 {
 		req.PageSize = 10
 	}
-	logger.Info("Getting feed for ", zap.String("feedType", req.Filters.EventStatus.String()))
 
-	eventStatus := socialPb.EventStatus_FUTURE
-	eventIds := []string{}
-	if req.Filters != nil {
-		if req.Filters.GetSubscribedEvents {
-			eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
-			if len(eventIds) == 0 {
-				return &socialPb.EventFeedResponse{Events: []*socialPb.EventProto{}}, nil
-			}
-		}
-		eventStatus = req.Filters.EventStatus
+	if req.Filters == nil {
+		return nil, status.Error(codes.InvalidArgument, "Filters are not provided")
 	}
+	logger.Info("Getting feed for ", zap.String("eventStatus", req.Filters.EventStatus.String()))
+
+	eventIds := []string{}
+	if req.Filters.GetSubscribedEvents {
+		eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
+		if len(eventIds) == 0 {
+			return &socialPb.EventFeedResponse{Events: []*socialPb.EventProto{}}, nil
+		}
+	}
+	eventStatus := req.Filters.EventStatus
 
 	feed := s.db.Event(tenant).GetEventFeed(
 		eventStatus,
@@ -181,6 +184,11 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *socialPb.EventId
 
 	if isExistsById {
 		return &socialPb.SocialStatusResponse{Status: "success"}, nil
+	}
+
+	isEventExistsById := s.db.Event(tenant).IsExistsById(req.EventId)
+	if isEventExistsById {
+		return nil, status.Error(codes.NotFound, "Event not found")
 	}
 
 	err := <-s.db.EventSubscribe(tenant).Save(eventSubscribeModel)

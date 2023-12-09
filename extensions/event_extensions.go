@@ -23,6 +23,7 @@ func AttachEventInfoAsync(
 
 	go func() {
 		feedEvent.FeedUserReactions = socialDb.React(tenant).GetUserReactions(feedEvent.EventId, userId)
+		feedEvent.HasFeedUserSubscribed = socialDb.EventSubscribe(tenant).IsSubscriber(userId, feedEvent.EventId)
 		done <- true
 	}()
 
@@ -38,18 +39,19 @@ func AttachMultipleEventInfoAsync(
 
 	done := make(chan bool)
 
-	eventIds := funk.Map(feedEvents, func(feedEvent *socialPb.EventProto) string {
+	entityId := funk.Map(feedEvents, func(feedEvent *socialPb.EventProto) string {
 		return userId + "/" + feedEvent.EventId
 	}).([]string)
 
 	go func() {
 		filter := bson.M{
 			"_id": bson.M{
-				"$in": eventIds,
+				"$in": entityId,
 			},
 		}
 
 		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
+		// subscriberResCHan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
 
 		select {
 		case reactions := <-reactionResChan:
@@ -66,6 +68,23 @@ func AttachMultipleEventInfoAsync(
 			}
 			logger.Info("No reactions found")
 		}
+
+		// select {
+		// case subscribers := <-subscriberResCHan:
+		// 	for _, subscriber := range subscribers {
+		// 		for _, feedEvent := range feedEvents {
+		// 			if feedEvent.EventId == subscriber.EventId {
+		// 				feedEvent.HasFeedUserSubscribed = true
+		// 			}
+		// 		}
+		// 	}
+		// case err := <-subscriberErrChan:
+		// 	if err != nil && err != mongo.ErrNoDocuments {
+		// 		logger.Error("Error while fetching subscribers", zap.Error(err))
+		// 	}
+		// 	logger.Info("No subscribers found")
+		// }
+
 		done <- true
 	}()
 	return done
