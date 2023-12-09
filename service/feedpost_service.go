@@ -62,9 +62,13 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPost
 	savePostCountPromise := s.db.SocialStats(tenant).UpdatePostCount(userId, 1)
 
 	// wait for async operations to finish.
-	<-savePostPromise
+	if err := <-savePostPromise; err != nil {
+		return nil, err
+	}
 	<-saveTagsPromise
-	<-savePostCountPromise
+	if err := <-savePostCountPromise; err != nil {
+		return nil, err
+	}
 
 	feedPostModelChan, errChan := s.db.FeedPost(tenant).FindOneById(feedPostModel.PostId)
 

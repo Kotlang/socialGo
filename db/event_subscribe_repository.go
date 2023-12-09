@@ -8,3 +8,8 @@ import (
 type EventSubscribeRepository struct {
 	odm.AbstractRepository[models.EventSubscribeModel]
 }
+
+func (r *EventSubscribeRepository) IsSubscriber(userId string, eventId string) bool {
+	return r.IsExistsById(userId + "/" + eventId)
+
+}
