@@ -8,5 +8,10 @@ type ReactionModel struct {
 }
 
 func (p *ReactionModel) Id() string {
-	return p.UserId + "/" + p.EntityId
+	return GetReactionId(p.UserId, p.EntityId)
+}
+
+// returns the reaction id for the given user and entity
+func GetReactionId(userId, entityId string) string {
+	return userId + "/" + entityId
 }

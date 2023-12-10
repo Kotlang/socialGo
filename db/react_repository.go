@@ -11,7 +11,6 @@ import (
 type ReactRepositoryInterface interface {
 	odm.BootRepository[models.ReactionModel]
 	GetUserReactions(entityId, userId string) []string
-	GetId(entityId, userId string) string
 }
 
 type ReactRepository struct {
@@ -21,7 +20,7 @@ type ReactRepository struct {
 // TODO: Use mongo find one with projection to get only reaction field instead of fetching whole document.
 func (r *ReactRepository) GetUserReactions(entityId, userId string) []string {
 	var reactions []string
-	reactionResChan, errorResChan := r.FindOneById(r.GetId(entityId, userId))
+	reactionResChan, errorResChan := r.FindOneById(models.GetReactionId(entityId, userId))
 
 	select {
 	case reactionRes := <-reactionResChan:
@@ -35,7 +34,4 @@ func (r *ReactRepository) GetUserReactions(entityId, userId string) []string {
 		}
 		return nil
 	}
-}
-func (r *ReactRepository) GetId(entityId, userId string) string {
-	return userId + "/" + entityId
 }

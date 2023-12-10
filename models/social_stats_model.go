@@ -9,5 +9,10 @@ type SocialStatsModel struct {
 }
 
 func (p *SocialStatsModel) Id() string {
-	return p.UserId
+	return GetSocialStatsId(p.UserId)
+}
+
+// returns the social stats id for the given user
+func GetSocialStatsId(userId string) string {
+	return userId
 }

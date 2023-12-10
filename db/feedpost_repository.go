@@ -56,9 +56,9 @@ func (r *FeedPostRepository) GetFeed(
 			bson.D{
 				{Key: "$lookup",
 					Value: bson.D{
-						{Key: "from", Value: "likes"},
+						{Key: "from", Value: "reaction"},
 						{Key: "localField", Value: "_id"},
-						{Key: "foreignField", Value: "postId"},
+						{Key: "foreignField", Value: "entityId"},
 						{Key: "as", Value: "res"},
 					},
 				},
@@ -80,8 +80,33 @@ func (r *FeedPostRepository) GetFeed(
 	}
 
 	if feedFilters.FetchUserCommentedPosts {
-		logger.Info("Implement comment fetch logic")
-		//TODO : Add the logic to fetch the posts commented by the user once the comments are seprated from the posts collection
+
+		filters["res.userId"] = feedFilters.UserId
+		pipeline := bson.A{
+			bson.D{
+				{Key: "$lookup",
+					Value: bson.D{
+						{Key: "from", Value: "comments"},
+						{Key: "localField", Value: "_id"},
+						{Key: "foreignField", Value: "parentId"},
+						{Key: "as", Value: "res"},
+					},
+				},
+			},
+			bson.D{{Key: "$match", Value: filters}},
+			bson.D{{Key: "$sort", Value: sort}},
+			bson.D{{Key: "$skip", Value: skip}},
+			bson.D{{Key: "$limit", Value: pageSize}},
+		}
+
+		resultsChan, errChan := r.Aggregate(pipeline)
+		select {
+		case res := <-resultsChan:
+			return res
+		case err := <-errChan:
+			logger.Error("Failed getting feed", zap.Error(err))
+			return []models.FeedPostModel{}
+		}
 	}
 
 	//If like and comment fetch is not required then fetch the posts as usual

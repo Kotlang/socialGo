@@ -15,6 +15,5 @@ type EventSubscribeRepository struct {
 }
 
 func (r *EventSubscribeRepository) IsSubscriber(userId string, eventId string) bool {
-	return r.IsExistsById(userId + "/" + eventId)
-
+	return r.IsExistsById(models.GetEventSubscribeId(userId, eventId))
 }
