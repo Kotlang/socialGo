@@ -49,6 +49,7 @@ func AttachPostUserInfoAsync(
 	done := make(chan bool)
 
 	go func() {
+		// get user reactions for the post
 		feedPost.FeedUserReactions = socialDb.React(tenant).GetUserReactions(feedPost.PostId, userId)
 		// get post author profile
 		authorProfile := <-GetSocialProfile(grpcContext, feedPost.UserId)
@@ -69,44 +70,44 @@ func AttachMultiplePostUserInfoAsync(
 
 	done := make(chan bool)
 
-	postIds := []string{}
-	for _, feedPost := range feedPosts {
-		postIds = append(postIds, feedPost.PostId)
-	}
-
 	authorIds := []string{}
+	entityIds := []string{}
 	for _, feedPost := range feedPosts {
 		authorIds = append(authorIds, feedPost.UserId)
+		// list of reaction ids for the post
+		entityIds = append(entityIds, models.GetReactionId(userId, feedPost.PostId))
 	}
-
 	go func() {
 		filter := bson.M{
 			"_id": bson.M{
-				"$in": postIds,
+				"$in": entityIds,
 			},
 		}
-
 		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
+		authorProfilesPromise := GetSocialProfiles(grpcContext, authorIds)
 
 		select {
 		case reactions := <-reactionResChan:
+			reactionsMap := make(map[string][]string)
 			for _, reaction := range reactions {
-				for _, feedPost := range feedPosts {
-					if feedPost.PostId == reaction.EntityId {
-						feedPost.FeedUserReactions = reaction.Reaction
-					}
+				reactionsMap[reaction.EntityId] = reaction.Reaction
+			}
+			for _, feedPost := range feedPosts {
+				feedPost.FeedUserReactions = reactionsMap[feedPost.PostId]
+				if feedPost.FeedUserReactions == nil {
+					feedPost.FeedUserReactions = []string{}
 				}
 			}
 		case <-errChan:
 		}
 
-		authorProfiles := <-GetSocialProfiles(grpcContext, authorIds)
+		authorProfiles := <-authorProfilesPromise
+		authorProfilesMap := make(map[string]*socialPb.SocialProfile)
+		for _, authorProfile := range authorProfiles {
+			authorProfilesMap[authorProfile.UserId] = authorProfile
+		}
 		for _, feedPost := range feedPosts {
-			for _, authorProfile := range authorProfiles {
-				if feedPost.UserId == authorProfile.UserId {
-					feedPost.AuthorInfo = authorProfile
-				}
-			}
+			feedPost.AuthorInfo = authorProfilesMap[feedPost.UserId]
 		}
 
 		done <- true
