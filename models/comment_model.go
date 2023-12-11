@@ -1,5 +1,7 @@
 package models
 
+import "github.com/google/uuid"
+
 type CommentModel struct {
 	CommentId   string           `bson:"_id"`
 	Content     string           `bson:"content"`
@@ -17,12 +19,7 @@ type CommentModel struct {
 
 func (c *CommentModel) Id() string {
 	if len(c.CommentId) == 0 {
-		c.CommentId = GetCommentId(c.UserId, c.ParentId)
+		c.CommentId = uuid.NewString()
 	}
 	return c.CommentId
-}
-
-// returns the comment id for the given user and parent
-func GetCommentId(userId, parentId string) string {
-	return userId + "/" + parentId
 }

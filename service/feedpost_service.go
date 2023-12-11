@@ -133,7 +133,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 		logger.Error(err)
 		return nil, status.Error(codes.InvalidArgument, err)
 	}
-
+	req.Filters.UserId = userId
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.Filters,
 		int64(req.PageNumber),

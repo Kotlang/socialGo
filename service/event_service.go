@@ -59,10 +59,10 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	if err := <-saveEventPromise; err != nil {
 		return nil, err
 	}
-	<-saveTagsPromise
 	if err := <-saveEventCountPromise; err != nil {
 		return nil, err
 	}
+	<-saveTagsPromise
 
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(eventModel.EventId)
 	select {
@@ -133,6 +133,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
+	// populate hasUserReacted field and feedUserReactions
 	<-extensions.AttachEventInfoAsync(s.db, ctx, &EventProto, userId, tenant, "default")
 	return &EventProto, nil
 }
@@ -148,6 +149,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 	}
 	logger.Info("Getting feed for ", zap.String("eventStatus", req.Filters.EventStatus.String()))
 
+	// create a list of eventIds to fetch subscribed events only if GetSubscribedEvents is true
 	eventIds := []string{}
 	if req.Filters.GetSubscribedEvents {
 		eventIds = <-extensions.GetSubscribedEventIds(s.db, tenant, userId)
@@ -169,6 +171,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 
+	// populate hasUserReacted field and feedUserReactions
 	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant, "default")
 	<-attachEventInfoPromise
 
@@ -187,7 +190,7 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *socialPb.EventId
 	}
 
 	isEventExistsById := s.db.Event(tenant).IsExistsById(req.EventId)
-	if isEventExistsById {
+	if !isEventExistsById {
 		return nil, status.Error(codes.NotFound, "Event not found")
 	}
 
