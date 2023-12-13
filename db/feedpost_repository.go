@@ -48,6 +48,11 @@ func (r *FeedPostRepository) GetFeed(
 
 	skip := pageNumber * pageSize
 
+	result := []models.FeedPostModel{}
+
+	// If the user wants to fetch the posts liked and commented by him then append the results of both the aggregation queries
+	fetchCommentedAndLikedPosts := feedFilters.FetchUserReactedPosts && feedFilters.FetchUserCommentedPosts
+
 	//Run a aggregation query to get the posts liked by the user as posts and likes are in different collections
 	if feedFilters.FetchUserReactedPosts {
 
@@ -72,7 +77,11 @@ func (r *FeedPostRepository) GetFeed(
 		resultsChan, errChan := r.Aggregate(pipeline)
 		select {
 		case res := <-resultsChan:
-			return res
+			if fetchCommentedAndLikedPosts {
+				result = append(result, res...)
+			} else {
+				return res
+			}
 		case err := <-errChan:
 			logger.Error("Failed getting feed", zap.Error(err))
 			return []models.FeedPostModel{}
@@ -102,7 +111,13 @@ func (r *FeedPostRepository) GetFeed(
 		resultsChan, errChan := r.Aggregate(pipeline)
 		select {
 		case res := <-resultsChan:
-			return res
+			if fetchCommentedAndLikedPosts {
+				result = append(result, res...)
+				return result
+			} else {
+				return res
+
+			}
 		case err := <-errChan:
 			logger.Error("Failed getting feed", zap.Error(err))
 			return []models.FeedPostModel{}
