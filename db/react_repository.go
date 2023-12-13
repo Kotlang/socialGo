@@ -8,14 +8,19 @@ import (
 	"go.uber.org/zap"
 )
 
+type ReactRepositoryInterface interface {
+	odm.BootRepository[models.ReactionModel]
+	GetUserReactions(entityId, userId string) []string
+}
+
 type ReactRepository struct {
-	odm.AbstractRepository[models.ReactionModel]
+	odm.UnimplementedBootRepository[models.ReactionModel]
 }
 
 // TODO: Use mongo find one with projection to get only reaction field instead of fetching whole document.
 func (r *ReactRepository) GetUserReactions(entityId, userId string) []string {
 	var reactions []string
-	reactionResChan, errorResChan := r.FindOneById(r.GetId(entityId, userId))
+	reactionResChan, errorResChan := r.FindOneById(models.GetReactionId(entityId, userId))
 
 	select {
 	case reactionRes := <-reactionResChan:
@@ -29,7 +34,4 @@ func (r *ReactRepository) GetUserReactions(entityId, userId string) []string {
 		}
 		return nil
 	}
-}
-func (r *ReactRepository) GetId(entityId, userId string) string {
-	return userId + "/" + entityId
 }

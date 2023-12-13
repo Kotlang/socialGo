@@ -14,10 +14,10 @@ import (
 
 type FollowGraphService struct {
 	socialPb.UnimplementedFollowGraphServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewFollowGraphService(db *db.SocialDb) *FollowGraphService {
+func NewFollowGraphService(db db.SocialDbInterface) *FollowGraphService {
 	return &FollowGraphService{
 		db: db,
 	}

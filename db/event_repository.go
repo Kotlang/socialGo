@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"time"
 
 	socialPb "github.com/Kotlang/socialGo/generated/social"
@@ -12,8 +11,13 @@ import (
 	"go.uber.org/zap"
 )
 
+type EventRepositoryInterface interface {
+	odm.BootRepository[models.EventModel]
+	GetEventFeed(eventStatus socialPb.EventStatus, eventIds []string, pageNumber, pageSize int64) []models.EventModel
+}
+
 type EventRepository struct {
-	odm.AbstractRepository[models.EventModel]
+	odm.UnimplementedBootRepository[models.EventModel]
 }
 
 func (r *EventRepository) GetEventFeed(
@@ -27,7 +31,6 @@ func (r *EventRepository) GetEventFeed(
 	if len(eventIds) > 0 {
 		filters["_id"] = bson.M{"$in": eventIds}
 	}
-	fmt.Println("now", now)
 	if socialPb.EventStatus_PAST == eventStatus {
 		filters["endAt"] = bson.M{"$lt": now}
 	} else if socialPb.EventStatus_ONGOING == eventStatus {

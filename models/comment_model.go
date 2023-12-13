@@ -1,8 +1,6 @@
 package models
 
-import (
-	"github.com/google/uuid"
-)
+import "github.com/google/uuid"
 
 type CommentModel struct {
 	CommentId   string           `bson:"_id"`

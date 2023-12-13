@@ -5,8 +5,8 @@ import (
 
 	"github.com/Kotlang/socialGo/db"
 	socialPb "github.com/Kotlang/socialGo/generated/social"
+	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/logger"
-	"github.com/thoas/go-funk"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 
 // AttachEventInfoAsync attaches event reaction info to the event proto.
 func AttachEventInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvent *socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
@@ -32,34 +32,43 @@ func AttachEventInfoAsync(
 
 // AttachMultipleEventInfoAsync attaches event reaction info to multiple event proto.
 func AttachMultipleEventInfoAsync(
-	socialDb *db.SocialDb,
+	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvents []*socialPb.EventProto,
 	userId, tenant, userType string) chan bool {
 
 	done := make(chan bool)
 
-	entityId := funk.Map(feedEvents, func(feedEvent *socialPb.EventProto) string {
-		return userId + "/" + feedEvent.EventId
-	}).([]string)
+	entityId := []string{}
+	for _, feedEvent := range feedEvents {
+		entityId = append(entityId, models.GetReactionId(feedEvent.EventId, userId))
+	}
 
 	go func() {
+
 		filter := bson.M{
 			"_id": bson.M{
 				"$in": entityId,
 			},
 		}
 
+		//get user reactions for the events
 		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
-		subscriberResCHan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
+		//get user subscribers for the events
+		subscriberResChan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
 
 		select {
 		case reactions := <-reactionResChan:
+			//map of event id to user reactions
+			reactionMap := make(map[string][]string)
 			for _, reaction := range reactions {
-				for _, feedEvent := range feedEvents {
-					if feedEvent.EventId == reaction.EntityId {
-						feedEvent.FeedUserReactions = reaction.Reaction
-					}
+				reactionMap[reaction.EntityId] = reaction.Reaction
+			}
+			//attach user reactions to the events
+			for _, feedEvent := range feedEvents {
+				feedEvent.FeedUserReactions = reactionMap[feedEvent.EventId]
+				if feedEvent.FeedUserReactions == nil {
+					feedEvent.FeedUserReactions = []string{}
 				}
 			}
 		case err := <-errChan:
@@ -70,14 +79,17 @@ func AttachMultipleEventInfoAsync(
 		}
 
 		select {
-		case subscribers := <-subscriberResCHan:
+		case subscribers := <-subscriberResChan:
+			//map of event id to user subscribed status
+			subscriberMap := make(map[string]bool)
 			for _, subscriber := range subscribers {
-				for _, feedEvent := range feedEvents {
-					if feedEvent.EventId == subscriber.EventId {
-						feedEvent.HasFeedUserSubscribed = true
-					}
-				}
+				subscriberMap[subscriber.EventId] = true
 			}
+			//attach user subscribed status to the events
+			for _, feedEvent := range feedEvents {
+				feedEvent.HasFeedUserSubscribed = subscriberMap[feedEvent.EventId]
+			}
+
 		case err := <-subscriberErrChan:
 			if err != nil && err != mongo.ErrNoDocuments {
 				logger.Error("Error while fetching subscribers", zap.Error(err))
@@ -91,7 +103,7 @@ func AttachMultipleEventInfoAsync(
 }
 
 // GetSubscribedEventIds returns the list of subscribed event ids for the given user
-func GetSubscribedEventIds(db *db.SocialDb, tenant string, subscriberId string) chan []string {
+func GetSubscribedEventIds(db db.SocialDbInterface, tenant string, subscriberId string) chan []string {
 	eventIds := make(chan []string)
 
 	go func() {

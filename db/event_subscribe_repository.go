@@ -5,11 +5,15 @@ import (
 	"github.com/SaiNageswarS/go-api-boot/odm"
 )
 
+type EventSubscribeRepositoryInterface interface {
+	odm.BootRepository[models.EventSubscribeModel]
+	IsSubscriber(userId string, eventId string) bool
+}
+
 type EventSubscribeRepository struct {
-	odm.AbstractRepository[models.EventSubscribeModel]
+	odm.UnimplementedBootRepository[models.EventSubscribeModel]
 }
 
 func (r *EventSubscribeRepository) IsSubscriber(userId string, eventId string) bool {
-	return r.IsExistsById(userId + "/" + eventId)
-
+	return r.IsExistsById(models.GetEventSubscribeId(userId, eventId))
 }

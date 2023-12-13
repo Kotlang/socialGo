@@ -36,6 +36,7 @@ type FeedPostModel struct {
 	CreatedOn   int64            `bson:"createdOn"`
 	Language    string           `bson:"language"`
 	IsDeleted   bool             `bson:"isDeleted"`
+	ContentType []string         `bson:"contentType"`
 }
 
 func (m *FeedPostModel) Id() string {

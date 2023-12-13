@@ -9,8 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
+type FollowersListRepositoryInterface interface {
+	odm.BootRepository[models.FollowersListModel]
+	GetFollowers(userId string, pageNumber, pageSize int64) []string
+	GetFollowing(userId string, pageNumber, pageSize int64) []string
+}
+
 type FollowersListRepository struct {
-	odm.AbstractRepository[models.FollowersListModel]
+	odm.UnimplementedBootRepository[models.FollowersListModel]
 }
 
 func (r *FollowersListRepository) GetFollowers(userId string, pageNumber, pageSize int64) []string {

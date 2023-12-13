@@ -27,10 +27,10 @@ import (
 
 type FeedpostService struct {
 	socialPb.UnimplementedUserPostServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewFeedpostService(db *db.SocialDb) *FeedpostService {
+func NewFeedpostService(db db.SocialDbInterface) *FeedpostService {
 	return &FeedpostService{
 		db: db,
 	}
@@ -133,7 +133,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 		logger.Error(err)
 		return nil, status.Error(codes.InvalidArgument, err)
 	}
-
+	req.Filters.UserId = userId
 	feed := s.db.FeedPost(tenant).GetFeed(
 		req.Filters,
 		int64(req.PageNumber),

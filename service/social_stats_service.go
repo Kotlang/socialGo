@@ -10,10 +10,10 @@ import (
 
 type SocialStatsService struct {
 	socialPb.UnimplementedSocialStatsServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewSocialStatsService(db *db.SocialDb) *SocialStatsService {
+func NewSocialStatsService(db db.SocialDbInterface) *SocialStatsService {
 	return &SocialStatsService{
 		db: db,
 	}

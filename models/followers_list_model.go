@@ -9,5 +9,10 @@ type FollowersListModel struct {
 }
 
 func (p *FollowersListModel) Id() string {
-	return p.UserId + "/" + p.FollowerId
+	return GetFollowersListId(p.UserId, p.FollowerId)
+}
+
+// returns the followers list id for the given user and follower
+func GetFollowersListId(userId, followerId string) string {
+	return userId + "/" + followerId
 }

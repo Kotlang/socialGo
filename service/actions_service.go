@@ -19,18 +19,22 @@ import (
 
 type ActionsService struct {
 	socialPb.UnimplementedActionsServer
-	db *db.SocialDb
+	db db.SocialDbInterface
 }
 
-func NewActionsService(db *db.SocialDb) *ActionsService {
+func NewActionsService(db db.SocialDbInterface) *ActionsService {
 	return &ActionsService{
 		db: db,
 	}
 }
 
 func (s *ActionsService) React(ctx context.Context, req *socialPb.ReactRequest) (*socialPb.SocialStatusResponse, error) {
+	if req.Reaction == "" || req.EntityId == "" {
+		return nil, status.Error(codes.InvalidArgument, "Fields missing")
+	}
+
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	reactionModel := getExistingReaction(s.db, tenant, userId+"/"+req.EntityId)
+	reactionModel := getExistingReaction(s.db, tenant, models.GetReactionId(userId, req.EntityId))
 
 	//check if reaction already exists in db
 	reactionExists := stringInArray(req.Reaction, reactionModel.Reaction)
@@ -95,19 +99,22 @@ func (s *ActionsService) React(ctx context.Context, req *socialPb.ReactRequest) 
 	}
 
 	errChan := s.db.React(tenant).Save(reactionModel)
-	select {
-	case err := <-errChan:
+	err := <-errChan
+	if err != nil {
 		logger.Error("Failed saving reaction", zap.Error(err))
 		return nil, err
-	default:
-		return &socialPb.SocialStatusResponse{Status: "success"}, nil
 	}
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
 func (s *ActionsService) UnReact(ctx context.Context, req *socialPb.ReactRequest) (*socialPb.SocialStatusResponse, error) {
+	if req.Reaction == "" || req.EntityId == "" {
+		return nil, status.Error(codes.InvalidArgument, "Fields missing")
+	}
+
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
-	reactionResChan, errResChan := s.db.React(tenant).FindOneById(userId + "/" + req.EntityId)
+	reactionResChan, errResChan := s.db.React(tenant).FindOneById(models.GetReactionId(userId, req.EntityId))
 	reactionModel := &models.ReactionModel{}
 
 	// check if reaction exists in db, if yes, remove it
@@ -168,6 +175,10 @@ func (s *ActionsService) UnReact(ctx context.Context, req *socialPb.ReactRequest
 }
 
 func (s *ActionsService) Comment(ctx context.Context, req *socialPb.CommentRequest) (*socialPb.CommentProto, error) {
+	if req.Content == "" || req.ParentId == "" {
+		return nil, status.Error(codes.InvalidArgument, "Fields missing")
+	}
+
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	commentModel := s.db.Comment(tenant).GetModel(req)
 
@@ -210,8 +221,18 @@ func (s *ActionsService) Comment(ctx context.Context, req *socialPb.CommentReque
 
 	commentAsyncSaveRequest := s.db.Comment(tenant).Save(commentModel)
 	<-commentAsyncSaveRequest
+
+	// fetch the saved comment
 	commentProto := &socialPb.CommentProto{}
-	copier.Copy(commentProto, commentModel)
+	commentResChan, errChan := s.db.Comment(tenant).FindOneById(commentModel.Id())
+	select {
+	case comment := <-commentResChan:
+		copier.Copy(commentProto, comment)
+	case err := <-errChan:
+		logger.Error("Probably comment not found", zap.Error(err))
+		return nil, err
+	}
+	<-extensions.AttachCommentUserInfoAsync(s.db, ctx, commentProto, userId, tenant, "default")
 	return commentProto, nil
 }
 
@@ -288,6 +309,9 @@ func (s *ActionsService) FetchComments(ctx context.Context, req *socialPb.Commen
 }
 
 func (s *ActionsService) FetchCommentById(ctx context.Context, req *socialPb.IdRequest) (*socialPb.CommentProto, error) {
+	if req.Id == "" {
+		return nil, status.Error(codes.InvalidArgument, "Field Id missing")
+	}
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	filter := bson.M{
 		"_id":       req.Id,
@@ -306,7 +330,7 @@ func (s *ActionsService) FetchCommentById(ctx context.Context, req *socialPb.IdR
 	}
 }
 
-func getExistingReaction(db *db.SocialDb, tenant string, reactionId string) *models.ReactionModel {
+func getExistingReaction(db db.SocialDbInterface, tenant string, reactionId string) *models.ReactionModel {
 	reaction := &models.ReactionModel{}
 
 	reactionResChan, errChan := db.React(tenant).FindOneById(reactionId)
