@@ -204,6 +204,25 @@ func (s *EventService) SubscribeEvent(ctx context.Context, req *socialPb.EventId
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
+func (s *EventService) UnsubscribeEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.SocialStatusResponse, error) {
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+
+	// retrieve event subscribe id
+	id := models.GetEventSubscribeId(userId, req.EventId)
+	isExistsById := s.db.EventSubscribe(tenant).IsExistsById(id)
+
+	if !isExistsById {
+		return &socialPb.SocialStatusResponse{Status: "success"}, nil
+	}
+
+	err := <-s.db.EventSubscribe(tenant).DeleteById(id)
+	if err != nil {
+		logger.Error("Failed to unsubscribe event", zap.Error(err))
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	return &socialPb.SocialStatusResponse{Status: "success"}, nil
+}
+
 func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventRequest) (*socialPb.SocialStatusResponse, error) {
 	_, tenant := auth.GetUserIdAndTenant(ctx)
 	// Fetch the existing event
