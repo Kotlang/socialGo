@@ -22,6 +22,7 @@ func (r *EventSubscribeRepository) IsSubscriber(userId string, eventId string) b
 	return r.IsExistsById(models.GetEventSubscribeId(userId, eventId))
 }
 
+// Refactor code to use projection instead of fetching all fields.
 func (r *EventSubscribeRepository) FetchEventSubscriberList(eventId string) []models.EventSubscribeModel {
 	filter := bson.M{"eventId": eventId}
 
