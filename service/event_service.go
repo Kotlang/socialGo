@@ -76,9 +76,9 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
-				"postId": eventModel.EventId,
-				"body":   eventModel.Description,
-				"title":  eventModel.Title,
+				"eventId": eventModel.EventId,
+				"body":    eventModel.Description,
+				"title":   eventModel.Title,
 			},
 			Topic:       fmt.Sprintf("%s.event.created", tenant),
 			TargetUsers: []string{userId},
@@ -285,4 +285,20 @@ func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventReq
 	}
 
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
+}
+
+func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.UserIdList, error) {
+	if req.EventId == "" {
+		return nil, status.Error(codes.InvalidArgument, "EventId is not provided")
+	}
+
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+
+	subscriberList := s.db.EventSubscribe(tenant).FetchEventSubscriberList(req.EventId)
+	subscriberIdList := []string{}
+
+	for _, subscriber := range subscriberList {
+		subscriberIdList = append(subscriberIdList, subscriber.UserId)
+	}
+	return &socialPb.UserIdList{UserId: subscriberIdList}, nil
 }
