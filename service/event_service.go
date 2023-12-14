@@ -286,3 +286,21 @@ func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventReq
 
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
+
+func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.UserIdList, error) {
+	if req.EventId == "" {
+		return nil, status.Error(codes.InvalidArgument, "EventId is not provided")
+	}
+
+	_, tenant := auth.GetUserIdAndTenant(ctx)
+	eventId := req.EventId
+
+	subscriberList := s.db.EventSubscribe(tenant).FetchEventSubscriberList(eventId)
+	fmt.Println("subscriberList", subscriberList)
+	subscriberIdList := []string{}
+
+	for _, subscriber := range subscriberList {
+		subscriberIdList = append(subscriberIdList, subscriber.UserId)
+	}
+	return &socialPb.UserIdList{UserId: subscriberIdList}, nil
+}
