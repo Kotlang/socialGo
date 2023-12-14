@@ -47,6 +47,7 @@ func AttachMultipleEventInfoAsync(
 	authorId := []string{}
 	for _, feedEvent := range feedEvents {
 		entityId = append(entityId, models.GetReactionId(feedEvent.EventId, userId))
+		// if author userId is not empty, add it to the authorId list
 		if feedEvent.AuthorInfo != nil && feedEvent.AuthorInfo.UserId != "" {
 			authorId = append(authorId, feedEvent.AuthorInfo.UserId)
 		}
@@ -111,10 +112,11 @@ func AttachMultipleEventInfoAsync(
 		//map of user id to author profile
 		authorMap := make(map[string]*socialPb.SocialProfile)
 		for _, authorProfile := range authorProfiles {
+			//associate author profile with the user id
 			authorMap[authorProfile.UserId] = authorProfile
 		}
-		//attach author profile to the events
 		for _, feedEvent := range feedEvents {
+			//attach author profile to the events if author profile is present
 			if authorMap[feedEvent.AuthorInfo.UserId] != nil {
 				feedEvent.AuthorInfo = authorMap[feedEvent.AuthorInfo.UserId]
 			}

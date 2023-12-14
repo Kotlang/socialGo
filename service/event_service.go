@@ -68,9 +68,10 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	case eventModel := <-eventModelChan:
 		res := getEventProto(eventModel)
 
-		//populate hasUserReacted field
+		// populate hasUserReacted field, feedUserReactions and authorInfo
 		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
+		// register event in notification service to send notifications.
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
@@ -131,7 +132,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// populate hasUserReacted field and feedUserReactions
+	// populate hasUserReacted field, feedUserReactions and authorInfo
 	<-extensions.AttachEventInfoAsync(s.db, ctx, EventProto, userId, tenant, "default")
 	return EventProto, nil
 }
@@ -171,7 +172,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 
-	// populate hasUserReacted field and feedUserReactions
+	// populate hasUserReacted field, feedUserReactions and authorInfo
 	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant, "default")
 	<-attachEventInfoPromise
 
