@@ -76,9 +76,9 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
-				"postId": eventModel.EventId,
-				"body":   eventModel.Description,
-				"title":  eventModel.Title,
+				"eventId": eventModel.EventId,
+				"body":    eventModel.Description,
+				"title":   eventModel.Title,
 			},
 			Topic:       fmt.Sprintf("%s.event.created", tenant),
 			TargetUsers: []string{userId},
