@@ -307,7 +307,7 @@ func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.Ev
 func getEventProto(eventModel *models.EventModel) *socialPb.EventProto {
 	eventProto := &socialPb.EventProto{}
 	copier.Copy(eventProto, eventModel)
-	// populate author userId to fetch author profile
+	// populate author userId to fetch author profile later using extensions.GetSocialProfiles
 	eventProto.AuthorInfo = &socialPb.SocialProfile{}
 	eventProto.AuthorInfo.Name = eventModel.AuthorName
 	eventProto.AuthorInfo.UserId = eventModel.AuthorId
