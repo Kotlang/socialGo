@@ -24,6 +24,10 @@ func AttachEventInfoAsync(
 	go func() {
 		feedEvent.FeedUserReactions = socialDb.React(tenant).GetUserReactions(feedEvent.EventId, userId)
 		feedEvent.HasFeedUserSubscribed = socialDb.EventSubscribe(tenant).IsSubscriber(userId, feedEvent.EventId)
+		if feedEvent.AuthorInfo != nil && feedEvent.AuthorInfo.UserId != "" {
+			authorProfile := <-GetSocialProfile(grpcContext, feedEvent.AuthorInfo.UserId)
+			feedEvent.AuthorInfo = authorProfile
+		}
 		done <- true
 	}()
 
@@ -40,8 +44,13 @@ func AttachMultipleEventInfoAsync(
 	done := make(chan bool)
 
 	entityId := []string{}
+	authorId := []string{}
 	for _, feedEvent := range feedEvents {
 		entityId = append(entityId, models.GetReactionId(feedEvent.EventId, userId))
+		// if author userId is not empty, add it to the authorId list
+		if feedEvent.AuthorInfo != nil && feedEvent.AuthorInfo.UserId != "" {
+			authorId = append(authorId, feedEvent.AuthorInfo.UserId)
+		}
 	}
 
 	go func() {
@@ -56,6 +65,8 @@ func AttachMultipleEventInfoAsync(
 		reactionResChan, errChan := socialDb.React(tenant).Find(filter, bson.D{}, 0, 0)
 		//get user subscribers for the events
 		subscriberResChan, subscriberErrChan := socialDb.EventSubscribe(tenant).Find(filter, bson.D{}, 0, 0)
+		//get author profiles for the events
+		authorResChan := GetSocialProfiles(grpcContext, authorId)
 
 		select {
 		case reactions := <-reactionResChan:
@@ -95,6 +106,20 @@ func AttachMultipleEventInfoAsync(
 				logger.Error("Error while fetching subscribers", zap.Error(err))
 			}
 			logger.Info("No subscribers found")
+		}
+
+		authorProfiles := <-authorResChan
+		//map of user id to author profile
+		authorMap := make(map[string]*socialPb.SocialProfile)
+		for _, authorProfile := range authorProfiles {
+			//associate author profile with the user id
+			authorMap[authorProfile.UserId] = authorProfile
+		}
+		for _, feedEvent := range feedEvents {
+			//attach author profile to the events if author profile is present
+			if authorMap[feedEvent.AuthorInfo.UserId] != nil {
+				feedEvent.AuthorInfo = authorMap[feedEvent.AuthorInfo.UserId]
+			}
 		}
 
 		done <- true

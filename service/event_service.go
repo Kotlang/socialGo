@@ -40,7 +40,6 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 	// map proto to model.
 	eventModel := s.db.Event(tenant).GetModel(req)
-	eventModel.UserId = userId
 
 	if len(strings.TrimSpace(eventModel.Language)) == 0 {
 		eventModel.Language = "english"
@@ -67,12 +66,12 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(eventModel.EventId)
 	select {
 	case eventModel := <-eventModelChan:
-		res := &socialPb.EventProto{}
-		copier.Copy(res, eventModel)
+		res := getEventProto(eventModel)
 
-		//populate hasUserReacted field
+		// populate hasUserReacted field, feedUserReactions and authorInfo
 		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
+		// register event in notification service to send notifications.
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			TemplateParameters: map[string]string{
@@ -116,7 +115,7 @@ func (s *EventService) DeleteEvent(ctx context.Context, req *socialPb.EventIdReq
 
 func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.EventProto, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	EventProto := socialPb.EventProto{}
+	var EventProto *socialPb.EventProto
 
 	filters := bson.M{}
 	filters["_id"] = req.EventId
@@ -125,7 +124,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 	eventChan, errChan := s.db.Event(tenant).FindOne(filters)
 	select {
 	case event := <-eventChan:
-		copier.Copy(&EventProto, event)
+		EventProto = getEventProto(event)
 	case err := <-errChan:
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Error(codes.NotFound, "Event not found")
@@ -133,9 +132,9 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	// populate hasUserReacted field and feedUserReactions
-	<-extensions.AttachEventInfoAsync(s.db, ctx, &EventProto, userId, tenant, "default")
-	return &EventProto, nil
+	// populate hasUserReacted field, feedUserReactions and authorInfo
+	<-extensions.AttachEventInfoAsync(s.db, ctx, EventProto, userId, tenant, "default")
+	return EventProto, nil
 }
 
 func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventFeedRequest) (*socialPb.EventFeedResponse, error) {
@@ -166,12 +165,14 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 		int64(req.PageSize))
 
 	feedProto := []*socialPb.EventProto{}
-	copier.Copy(&feedProto, feed)
+	for _, event := range feed {
+		feedProto = append(feedProto, getEventProto(&event))
+	}
 	response := &socialPb.EventFeedResponse{Events: feedProto}
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize
 
-	// populate hasUserReacted field and feedUserReactions
+	// populate hasUserReacted field, feedUserReactions and authorInfo
 	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant, "default")
 	<-attachEventInfoPromise
 
@@ -301,4 +302,15 @@ func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.Ev
 		subscriberIdList = append(subscriberIdList, subscriber.UserId)
 	}
 	return &socialPb.UserIdList{UserId: subscriberIdList}, nil
+}
+
+func getEventProto(eventModel *models.EventModel) *socialPb.EventProto {
+	eventProto := &socialPb.EventProto{}
+	copier.Copy(eventProto, eventModel)
+	// populate author userId to fetch author profile later using extensions.GetSocialProfiles
+	eventProto.AuthorInfo = &socialPb.SocialProfile{}
+	eventProto.AuthorInfo.Name = eventModel.AuthorName
+	eventProto.AuthorInfo.UserId = eventModel.AuthorId
+
+	return eventProto
 }
