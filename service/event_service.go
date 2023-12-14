@@ -296,7 +296,6 @@ func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.Ev
 	eventId := req.EventId
 
 	subscriberList := s.db.EventSubscribe(tenant).FetchEventSubscriberList(eventId)
-	fmt.Println("subscriberList", subscriberList)
 	subscriberIdList := []string{}
 
 	for _, subscriber := range subscriberList {
