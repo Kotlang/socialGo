@@ -293,9 +293,8 @@ func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.Ev
 	}
 
 	_, tenant := auth.GetUserIdAndTenant(ctx)
-	eventId := req.EventId
 
-	subscriberList := s.db.EventSubscribe(tenant).FetchEventSubscriberList(eventId)
+	subscriberList := s.db.EventSubscribe(tenant).FetchEventSubscriberList(req.EventId)
 	subscriberIdList := []string{}
 
 	for _, subscriber := range subscriberList {
