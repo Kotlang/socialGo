@@ -2,12 +2,16 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Kotlang/socialGo/db"
 	"github.com/Kotlang/socialGo/extensions"
+	notificationPb "github.com/Kotlang/socialGo/generated/notification"
 	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
 	"github.com/SaiNageswarS/go-api-boot/auth"
+	"github.com/SaiNageswarS/go-api-boot/logger"
+	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -31,6 +35,8 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *socialPb.Follo
 		UserId:     req.UserId,
 		FollowerId: userId,
 	}
+	// fetch follower profile.
+	followerIdResChan := extensions.GetSocialProfile(ctx, userId)
 
 	// check if follow relationship already exists.
 	if s.db.FollowersList(tenant).IsExistsById(followerModel.Id()) {
@@ -41,6 +47,23 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *socialPb.Follo
 
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
+	}
+
+	folower := <-followerIdResChan
+	err = <-extensions.RegisterEvent(ctx, &notificationPb.RegisterEventRequest{
+		EventType: "user.follow",
+		TemplateParameters: map[string]string{
+			"follower": userId,
+			"followee": req.UserId,
+			"title":    fmt.Sprintf("%s started following you", folower.Name),
+			"body":     "Click to view profile",
+		},
+		Topic:       fmt.Sprintf("%s.user.follow", tenant),
+		TargetUsers: []string{req.UserId},
+	})
+
+	if err != nil {
+		logger.Error("Failed to register event", zap.Error(err))
 	}
 
 	followerCountPromise := s.db.SocialStats(tenant).UpdateFollowerCount(req.UserId, 1)
