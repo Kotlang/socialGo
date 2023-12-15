@@ -124,9 +124,15 @@ func (s *ActionsService) UnReact(ctx context.Context, req *socialPb.ReactRequest
 		if len(reactionModel.Reaction) == len(newReactionArray) {
 			return nil, status.Error(codes.NotFound, "Reaction not found")
 		}
-		reactionModel.Reaction = newReactionArray
-		err := <-s.db.React(tenant).Save(reactionModel)
 
+		// if reaction array is empty, delete the reaction
+		var err error
+		if len(newReactionArray) == 0 {
+			err = <-s.db.React(tenant).DeleteById(reactionModel.Id())
+		} else {
+			reactionModel.Reaction = newReactionArray
+			err = <-s.db.React(tenant).Save(reactionModel)
+		}
 		if err != nil {
 			logger.Error("Error deleting reaction", zap.Error(err))
 			return &socialPb.SocialStatusResponse{Status: "fail"}, err
