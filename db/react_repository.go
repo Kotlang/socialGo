@@ -18,9 +18,9 @@ type ReactRepository struct {
 }
 
 // TODO: Use mongo find one with projection to get only reaction field instead of fetching whole document.
-func (r *ReactRepository) GetUserReactions(entityId, userId string) []string {
+func (r *ReactRepository) GetUserReactions(userId, entityId string) []string {
 	var reactions []string
-	reactionResChan, errorResChan := r.FindOneById(models.GetReactionId(entityId, userId))
+	reactionResChan, errorResChan := r.FindOneById(models.GetReactionId(userId, entityId))
 
 	select {
 	case reactionRes := <-reactionResChan:
