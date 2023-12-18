@@ -50,7 +50,7 @@ func AttachPostUserInfoAsync(
 
 	go func() {
 		// get user reactions for the post
-		feedPost.FeedUserReactions = socialDb.React(tenant).GetUserReactions(feedPost.PostId, userId)
+		feedPost.FeedUserReactions = socialDb.React(tenant).GetUserReactions(userId, feedPost.PostId)
 		// get post author profile
 		authorProfile := <-GetSocialProfile(grpcContext, feedPost.UserId)
 		feedPost.AuthorInfo = authorProfile

@@ -22,7 +22,7 @@ func AttachEventInfoAsync(
 	done := make(chan bool)
 
 	go func() {
-		feedEvent.FeedUserReactions = socialDb.React(tenant).GetUserReactions(feedEvent.EventId, userId)
+		feedEvent.FeedUserReactions = socialDb.React(tenant).GetUserReactions(userId, feedEvent.EventId)
 		feedEvent.HasFeedUserSubscribed = socialDb.EventSubscribe(tenant).IsSubscriber(userId, feedEvent.EventId)
 		if feedEvent.AuthorInfo != nil && feedEvent.AuthorInfo.UserId != "" {
 			authorProfile := <-GetSocialProfile(grpcContext, feedEvent.AuthorInfo.UserId)
