@@ -116,7 +116,7 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *socialPb
 
 		resp, err := client.GetProfileById(
 			ctx,
-			&authPb.GetProfileRequest{UserId: userId})
+			&authPb.IdRequest{UserId: userId})
 		if err != nil {
 			logger.Error("Failed getting user profile", zap.Error(err))
 			result <- nil
@@ -129,6 +129,37 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *socialPb
 			Occupation: "farmer",
 			UserId:     resp.LoginId,
 		}
+	}()
+
+	return result
+}
+
+func IsUserAdmin(grpcContext context.Context, userId string) chan bool {
+	result := make(chan bool)
+
+	go func() {
+		conn := auth_client.getConnection()
+		if conn == nil {
+			result <- false
+			return
+		}
+
+		client := authPb.NewProfileClient(conn)
+
+		ctx := prepareCallContext(grpcContext)
+		if ctx == nil {
+			result <- false
+			return
+		}
+
+		resp, err := client.IsUserAdmin(ctx, &authPb.IdRequest{UserId: userId})
+		if err != nil {
+			logger.Error("Failed getting user profile", zap.Error(err))
+			result <- false
+			return
+		}
+
+		result <- resp.IsAdmin
 	}()
 
 	return result
