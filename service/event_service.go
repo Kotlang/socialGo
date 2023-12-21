@@ -38,6 +38,13 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	}
 
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
+
+	// check if user is admin, if not return error.
+	isUserAdmin := <-extensions.IsUserAdmin(ctx, userId)
+	if !isUserAdmin {
+		return nil, status.Error(codes.PermissionDenied, "User is not admin")
+	}
+
 	// map proto to model.
 	eventModel := s.db.Event(tenant).GetModel(req)
 
@@ -96,9 +103,16 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 func (s *EventService) DeleteEvent(ctx context.Context, req *socialPb.EventIdRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 
+	// check if user is admin, if not return error.
+	isUserAdmin := <-extensions.IsUserAdmin(ctx, userId)
+	if !isUserAdmin {
+		return nil, status.Error(codes.PermissionDenied, "User is not admin")
+	}
+
 	eventModelChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
 	select {
 	case eventModel := <-eventModelChan:
+		// mark event as deleted.
 		eventModel.IsDeleted = true
 		<-s.db.Event(tenant).Save(eventModel)
 	case err := <-errChan:
@@ -225,7 +239,14 @@ func (s *EventService) UnsubscribeEvent(ctx context.Context, req *socialPb.Event
 }
 
 func (s *EventService) EditEvent(ctx context.Context, req *socialPb.EditEventRequest) (*socialPb.SocialStatusResponse, error) {
-	_, tenant := auth.GetUserIdAndTenant(ctx)
+	userId, tenant := auth.GetUserIdAndTenant(ctx)
+
+	// check if user is admin, if not return error.
+	isUserAdmin := <-extensions.IsUserAdmin(ctx, userId)
+	if !isUserAdmin {
+		return nil, status.Error(codes.PermissionDenied, "User is not admin")
+	}
+
 	// Fetch the existing event
 	eventChan, errChan := s.db.Event(tenant).FindOneById(req.EventId)
 	eventModel := s.db.Event(tenant).GetModel(req)

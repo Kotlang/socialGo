@@ -156,9 +156,10 @@ func (s *FeedpostService) DeletePost(ctx context.Context, req *socialPb.DeletePo
 	postChan, errChan := s.db.FeedPost(tenant).FindOneById(req.Id)
 	postEntity := &models.FeedPostModel{}
 
+	IsUserAdmin := <-extensions.IsUserAdmin(ctx, userId)
 	select {
 	case postEntity = <-postChan:
-		if postEntity.UserId != userId {
+		if postEntity.UserId != userId && !IsUserAdmin {
 			return nil, status.Error(codes.PermissionDenied, "User doesn't own the post.")
 		}
 	case err := <-errChan:
