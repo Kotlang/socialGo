@@ -14,6 +14,7 @@ type EventModel struct {
 	Description  string           `bson:"description"`
 	MediaUrls    []MediaUrl       `bson:"mediaUrls"`
 	WebPreviews  []WebPreview     `bson:"webPreviews"`
+	Tags         []string         `bson:"tags"`
 	AuthorId     string           `bson:"authorId"`
 	AuthorName   string           `bson:"authorName"`
 	NumReacts    map[string]int64 `bson:"numReacts"`

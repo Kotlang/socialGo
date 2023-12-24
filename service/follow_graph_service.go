@@ -50,13 +50,14 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *socialPb.Follo
 	}
 
 	folower := <-followerIdResChan
+	// TODO: update title text to contain district name
 	err = <-extensions.RegisterEvent(ctx, &notificationPb.RegisterEventRequest{
 		EventType: "user.follow",
+		Title:     fmt.Sprintf("%s आपसे नवाचार के माध्यम से सीखना चाहते है", folower.Name),
+		Body:      fmt.Sprintf("%s नवाचार पर आपके साझा किये हुए अनुभव को उपयोगी मानते है", folower.Name),
 		TemplateParameters: map[string]string{
 			"follower": userId,
 			"followee": req.UserId,
-			"title":    fmt.Sprintf("%s started following you", folower.Name),
-			"body":     "Click to view profile",
 		},
 		Topic:       fmt.Sprintf("%s.user.follow", tenant),
 		TargetUsers: []string{req.UserId},

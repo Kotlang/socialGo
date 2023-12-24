@@ -78,13 +78,13 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPost
 		copier.Copy(res, feedPostModel)
 
 		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default")
-
+		<-attachAuthorInfoPromise
 		err := <-extensions.RegisterEvent(ctx, &notificationPb.RegisterEventRequest{
 			EventType: "post.created",
+			Title:     fmt.Sprintf("%s ने %s पर अपना %s शेयर किया है", res.AuthorInfo.Name, res.Tags[0], feedPostModel.PostType),
+			Body:      fmt.Sprintf("%s आपके विचार सुनना चाहता है! एप खोलें और कमेंट करें!", res.AuthorInfo.Name),
 			TemplateParameters: map[string]string{
 				"postId": feedPostModel.PostId,
-				"body":   feedPostModel.Post,
-				"title":  feedPostModel.Title,
 			},
 			Topic:       fmt.Sprintf("%s.post.created", tenant),
 			TargetUsers: []string{userId},
@@ -93,7 +93,6 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPost
 			logger.Error("Failed to register event", zap.Error(err))
 		}
 
-		<-attachAuthorInfoPromise
 		return res, nil
 	case err := <-errChan:
 		return nil, status.Error(codes.Internal, err.Error())

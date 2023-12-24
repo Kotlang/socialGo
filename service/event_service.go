@@ -78,15 +78,30 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		// populate hasUserReacted field, feedUserReactions and authorInfo
 		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
 
-		// register event in notification service to send notifications.
+		// register event in notification service to send notifications for event creation
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
+			Title:     "प्रेरणा लें, ज्ञान बढ़ाएं: जैविक खेती के अनुभव से सीखें !",
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
-				"body":    eventModel.Description,
-				"title":   eventModel.Title,
 			},
 			Topic:       fmt.Sprintf("%s.event.created", tenant),
+			TargetUsers: []string{userId},
+		})
+		if err != nil {
+			logger.Error("Failed to register event", zap.Error(err))
+		}
+
+		// register event in notification service to send notification for event start
+		err = <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
+			EventType: "event.reminder",
+			Title:     fmt.Sprintf("अपने जैविक खेती कौशल को निखारें! %s अभी शुरू है!", eventModel.Title),
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
+			TemplateParameters: map[string]string{
+				"eventId": eventModel.EventId,
+			},
+			Topic:       fmt.Sprintf("%s.event.reminder", tenant),
 			TargetUsers: []string{userId},
 		})
 		if err != nil {
