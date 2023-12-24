@@ -83,6 +83,7 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPost
 			EventType: "post.created",
 			Title:     fmt.Sprintf("%s ने %s पर अपना %s शेयर किया है", res.AuthorInfo.Name, res.Tags[0], feedPostModel.PostType),
 			Body:      fmt.Sprintf("%s आपके विचार सुनना चाहता है! एप खोलें और कमेंट करें!", res.AuthorInfo.Name),
+			ImageURL:  res.AuthorInfo.PhotoUrl,
 			TemplateParameters: map[string]string{
 				"postId": feedPostModel.PostId,
 			},

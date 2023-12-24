@@ -83,6 +83,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 			EventType: "event.created",
 			Title:     "प्रेरणा लें, ज्ञान बढ़ाएं: जैविक खेती के अनुभव से सीखें !",
 			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
+			ImageURL:  res.MediaUrls[0].Url,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
 			},
@@ -98,6 +99,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 			EventType: "event.reminder",
 			Title:     fmt.Sprintf("अपने जैविक खेती कौशल को निखारें! %s अभी शुरू है!", eventModel.Title),
 			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
+			ImageURL:  res.MediaUrls[0].Url,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
 			},
