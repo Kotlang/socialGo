@@ -2,7 +2,6 @@ package extensions
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
@@ -55,7 +54,6 @@ func AttachPostUserInfoAsync(
 		// get post author profile
 		authorProfile := <-GetSocialProfile(grpcContext, feedPost.UserId)
 		feedPost.AuthorInfo = authorProfile
-		fmt.Println("authorProfile", authorProfile)
 
 		done <- true
 	}()

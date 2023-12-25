@@ -47,7 +47,7 @@ func RegisterEvent(grpcContext context.Context, event *notificationPb.RegisterEv
 		// call notification service.
 		conn := notification_client.getNotificationConnection()
 		if conn == nil {
-			errChan <- errors.New("Failed to get connection with notification service")
+			errChan <- errors.New("failed to get connection with notification service")
 			return
 		}
 
@@ -55,7 +55,7 @@ func RegisterEvent(grpcContext context.Context, event *notificationPb.RegisterEv
 
 		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
-			errChan <- errors.New("Failed to get context")
+			errChan <- errors.New("failed to get context")
 			return
 		}
 
