@@ -75,8 +75,11 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	case eventModel := <-eventModelChan:
 		res := getEventProto(eventModel)
 
-		// populate tag and image url for notification
-		tag, imageURL := "", "a"
+		// populate hasUserReacted field, feedUserReactions and authorInfo
+		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant)
+
+		// populate tag, image url and authorName for notification
+		var tag, imageURL, authorName string
 		if len(res.Tags) > 0 {
 			tag = res.Tags[0]
 
@@ -84,14 +87,19 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		if len(res.MediaUrls) > 0 {
 			imageURL = res.MediaUrls[0].Url
 		}
-		// populate hasUserReacted field, feedUserReactions and authorInfo
-		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant)
+		<-attachEventInfoPromise
+
+		// get author name from author info if present
+		authorName = eventModel.AuthorName
+		if res.AuthorInfo != nil {
+			authorName = res.AuthorInfo.Name
+		}
 
 		// register event in notification service to send notifications for event creation
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			Title:     "प्रेरणा लें, ज्ञान बढ़ाएं: जैविक खेती के अनुभव से सीखें !",
-			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, tag),
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", authorName, tag),
 			ImageURL:  imageURL,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
@@ -107,7 +115,7 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		err = <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.reminder",
 			Title:     fmt.Sprintf("अपने जैविक खेती कौशल को निखारें! %s अभी शुरू है!", eventModel.Title),
-			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, tag),
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", authorName, tag),
 			ImageURL:  imageURL,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
@@ -119,7 +127,6 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 			logger.Error("Failed to register event", zap.Error(err))
 		}
 
-		<-attachEventInfoPromise
 		return res, nil
 	case err := <-errChan:
 		return nil, status.Error(codes.Internal, err.Error())
