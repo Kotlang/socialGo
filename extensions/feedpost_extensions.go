@@ -44,7 +44,7 @@ func AttachPostUserInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedPost *socialPb.UserPostProto,
-	userId, tenant, userType string) chan bool {
+	userId, tenant string) chan bool {
 
 	done := make(chan bool)
 
@@ -66,7 +66,7 @@ func AttachMultiplePostUserInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedPosts []*socialPb.UserPostProto,
-	userId, tenant, userType string) chan bool {
+	userId, tenant string) chan bool {
 
 	done := make(chan bool)
 
