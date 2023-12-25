@@ -17,7 +17,7 @@ func AttachEventInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvent *socialPb.EventProto,
-	userId, tenant, userType string) chan bool {
+	userId, tenant string) chan bool {
 
 	done := make(chan bool)
 
@@ -39,7 +39,7 @@ func AttachMultipleEventInfoAsync(
 	socialDb db.SocialDbInterface,
 	grpcContext context.Context,
 	feedEvents []*socialPb.EventProto,
-	userId, tenant, userType string) chan bool {
+	userId, tenant string) chan bool {
 
 	done := make(chan bool)
 

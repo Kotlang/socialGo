@@ -61,7 +61,7 @@ func (s *FollowGraphService) FollowUser(ctx context.Context, req *socialPb.Follo
 			"followee": req.UserId,
 		},
 		Topic:       fmt.Sprintf("%s.user.follow", tenant),
-		TargetUsers: []string{req.UserId},
+		TargetUsers: []string{userId},
 	})
 
 	if err != nil {

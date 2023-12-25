@@ -77,13 +77,27 @@ func (s *FeedpostService) CreatePost(ctx context.Context, req *socialPb.UserPost
 		res := &socialPb.UserPostProto{}
 		copier.Copy(res, feedPostModel)
 
-		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant, "default")
+		attachAuthorInfoPromise := extensions.AttachPostUserInfoAsync(s.db, ctx, res, userId, tenant)
 		<-attachAuthorInfoPromise
+
+		authorName := ""
+		if res.AuthorInfo != nil {
+			authorName = res.AuthorInfo.Name
+		}
+		tag := ""
+		if len(res.Tags) > 0 {
+			tag = res.Tags[0]
+		}
+		imageURL := ""
+		if len(res.MediaUrls) > 0 {
+			imageURL = res.MediaUrls[0].Url
+		}
+
 		err := <-extensions.RegisterEvent(ctx, &notificationPb.RegisterEventRequest{
 			EventType: "post.created",
-			Title:     fmt.Sprintf("%s ने %s पर अपना %s शेयर किया है", res.AuthorInfo.Name, res.Tags[0], feedPostModel.PostType),
-			Body:      fmt.Sprintf("%s आपके विचार सुनना चाहता है! एप खोलें और कमेंट करें!", res.AuthorInfo.Name),
-			ImageURL:  res.AuthorInfo.PhotoUrl,
+			Title:     fmt.Sprintf("%s ने %s पर अपना %s शेयर किया है", authorName, tag, feedPostModel.PostType),
+			Body:      fmt.Sprintf("%s आपके विचार सुनना चाहता है! एप खोलें और कमेंट करें!", authorName),
+			ImageURL:  imageURL,
 			TemplateParameters: map[string]string{
 				"postId": feedPostModel.PostId,
 			},
@@ -117,7 +131,7 @@ func (s *FeedpostService) GetPost(ctx context.Context, req *socialPb.GetPostRequ
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 
-	<-extensions.AttachPostUserInfoAsync(s.db, ctx, &postProto, userId, tenant, "default")
+	<-extensions.AttachPostUserInfoAsync(s.db, ctx, &postProto, userId, tenant)
 	return &postProto, nil
 }
 
@@ -144,7 +158,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 
 	response := &socialPb.FeedResponse{Posts: feedProto}
 
-	attachPostInfoPromise := extensions.AttachMultiplePostUserInfoAsync(s.db, ctx, response.Posts, userId, tenant, "default")
+	attachPostInfoPromise := extensions.AttachMultiplePostUserInfoAsync(s.db, ctx, response.Posts, userId, tenant)
 	<-attachPostInfoPromise
 	response.PageNumber = req.PageNumber
 	response.PageSize = req.PageSize

@@ -75,15 +75,24 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 	case eventModel := <-eventModelChan:
 		res := getEventProto(eventModel)
 
+		// populate tag and image url for notification
+		tag, imageURL := "", "a"
+		if len(res.Tags) > 0 {
+			tag = res.Tags[0]
+
+		}
+		if len(res.MediaUrls) > 0 {
+			imageURL = res.MediaUrls[0].Url
+		}
 		// populate hasUserReacted field, feedUserReactions and authorInfo
-		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant, "default")
+		attachEventInfoPromise := extensions.AttachEventInfoAsync(s.db, ctx, res, userId, tenant)
 
 		// register event in notification service to send notifications for event creation
 		err := <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.created",
 			Title:     "प्रेरणा लें, ज्ञान बढ़ाएं: जैविक खेती के अनुभव से सीखें !",
-			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
-			ImageURL:  res.MediaUrls[0].Url,
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, tag),
+			ImageURL:  imageURL,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
 			},
@@ -98,8 +107,8 @@ func (s *EventService) CreateEvent(ctx context.Context, req *socialPb.CreateEven
 		err = <-extensions.RegisterEvent(ctx, &notificationsPb.RegisterEventRequest{
 			EventType: "event.reminder",
 			Title:     fmt.Sprintf("अपने जैविक खेती कौशल को निखारें! %s अभी शुरू है!", eventModel.Title),
-			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, eventModel.Tags[0]),
-			ImageURL:  res.MediaUrls[0].Url,
+			Body:      fmt.Sprintf("%s %s के विषय में अपना अनुभव साझा करेंगे", eventModel.AuthorName, tag),
+			ImageURL:  imageURL,
 			TemplateParameters: map[string]string{
 				"eventId": eventModel.EventId,
 			},
@@ -164,7 +173,7 @@ func (s *EventService) GetEvent(ctx context.Context, req *socialPb.EventIdReques
 	}
 
 	// populate hasUserReacted field, feedUserReactions and authorInfo
-	<-extensions.AttachEventInfoAsync(s.db, ctx, EventProto, userId, tenant, "default")
+	<-extensions.AttachEventInfoAsync(s.db, ctx, EventProto, userId, tenant)
 	return EventProto, nil
 }
 
@@ -204,7 +213,7 @@ func (s *EventService) GetEventFeed(ctx context.Context, req *socialPb.GetEventF
 	response.PageSize = req.PageSize
 
 	// populate hasUserReacted field, feedUserReactions and authorInfo
-	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant, "default")
+	attachEventInfoPromise := extensions.AttachMultipleEventInfoAsync(s.db, ctx, response.Events, userId, tenant)
 	<-attachEventInfoPromise
 
 	return response, nil
@@ -344,7 +353,7 @@ func (s *EventService) GetEventSubscribers(ctx context.Context, req *socialPb.Ev
 
 func getEventProto(eventModel *models.EventModel) *socialPb.EventProto {
 	eventProto := &socialPb.EventProto{}
-	copier.Copy(eventProto, eventModel)
+	copier.CopyWithOption(eventProto, eventModel, copier.Option{IgnoreEmpty: true, DeepCopy: true})
 	// populate author userId to fetch author profile later using extensions.GetSocialProfiles
 	eventProto.AuthorInfo = &socialPb.SocialProfile{}
 	eventProto.AuthorInfo.Name = eventModel.AuthorName
