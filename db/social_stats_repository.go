@@ -12,6 +12,8 @@ type SocialStatsRepositoryInterface interface {
 	UpdateFollowerCount(userId string, followers int32) chan error
 	UpdateFollowingCount(userId string, following int32) chan error
 	UpdateEventCount(userId string, events int32) chan error
+	UpdateCommentsCount(userId string, comments int32) chan error
+	UpdateReactCount(userId string, like int32) chan error
 }
 
 type SocialStatsRepository struct {
@@ -33,13 +35,13 @@ func (r *SocialStatsRepository) GetStats(userId string) *models.SocialStatsModel
 
 func (r *SocialStatsRepository) UpdatePostCount(userId string, posts int32) chan error {
 	currentStats := r.GetStats(userId)
-	currentStats.Posts += posts
+	currentStats.PostsCount += posts
 	return r.Save(currentStats)
 }
 
 func (r *SocialStatsRepository) UpdateEventCount(userId string, events int32) chan error {
 	currentStats := r.GetStats(userId)
-	currentStats.Events += events
+	currentStats.EventsCount += events
 	return r.Save(currentStats)
 }
 
@@ -52,5 +54,17 @@ func (r *SocialStatsRepository) UpdateFollowerCount(userId string, followers int
 func (r *SocialStatsRepository) UpdateFollowingCount(userId string, following int32) chan error {
 	currentStats := r.GetStats(userId)
 	currentStats.Following += following
+	return r.Save(currentStats)
+}
+
+func (r *SocialStatsRepository) UpdateCommentsCount(userId string, comments int32) chan error {
+	currentStats := r.GetStats(userId)
+	currentStats.CommentsCount += comments
+	return r.Save(currentStats)
+}
+
+func (r *SocialStatsRepository) UpdateReactCount(userId string, react int32) chan error {
+	currentStats := r.GetStats(userId)
+	currentStats.ReactCount += react
 	return r.Save(currentStats)
 }

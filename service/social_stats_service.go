@@ -29,8 +29,11 @@ func (s *SocialStatsService) GetStats(ctx context.Context, req *socialPb.GetStat
 	stats := s.db.SocialStats(tenant).GetStats(userId)
 
 	return &socialPb.GetStatsResponse{
-		PostsCount:     stats.Posts,
+		PostsCount:     stats.PostsCount,
 		FollowersCount: stats.Followers,
 		FollowingCount: stats.Following,
+		ReactCount:     stats.ReactCount,
+		CommentsCount:  stats.CommentsCount,
+		EventsCount:    stats.EventsCount,
 	}, nil
 }
