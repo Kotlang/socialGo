@@ -164,6 +164,7 @@ func (s *FeedpostService) GetFeed(ctx context.Context, req *socialPb.GetFeedRequ
 	response.PageSize = req.PageSize
 	return response, nil
 }
+
 func (s *FeedpostService) DeletePost(ctx context.Context, req *socialPb.DeletePostRequest) (*socialPb.SocialStatusResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
 

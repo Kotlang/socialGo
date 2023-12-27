@@ -10,16 +10,24 @@ import (
 
 type CommentRepositoryInterface interface {
 	odm.BootRepository[models.CommentModel]
-	GetComments(parentId string, pageNumber, pageSize int64) []models.CommentModel
+	GetComments(parentId, userId string, pageNumber, pageSize int64) []models.CommentModel
 }
 type CommentRepository struct {
 	odm.UnimplementedBootRepository[models.CommentModel]
 }
 
-func (c *CommentRepository) GetComments(parentId string, pageNumber, pageSize int64) []models.CommentModel {
+func (c *CommentRepository) GetComments(parentId, userId string, pageNumber, pageSize int64) []models.CommentModel {
 	filters := bson.M{}
-	filters["parentId"] = parentId
+
+	if len(parentId) > 0 {
+		filters["parentId"] = parentId
+	}
+
 	filters["isDeleted"] = false
+
+	if len(userId) > 0 {
+		filters["userId"] = userId
+	}
 
 	sort := bson.D{
 		{Key: "createdOn", Value: -1},

@@ -25,6 +25,7 @@ func (r *FeedPostRepository) GetFeed(
 	if feedFilters != nil {
 		filters["postType"] = feedFilters.PostType.String()
 	}
+
 	if feedFilters != nil && len(feedFilters.ContentType) > 0 {
 		filters["contentType"] = bson.M{"$in": feedFilters.ContentType}
 	}

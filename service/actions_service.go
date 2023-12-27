@@ -99,6 +99,8 @@ func (s *ActionsService) React(ctx context.Context, req *socialPb.ReactRequest) 
 	}
 
 	errChan := s.db.React(tenant).Save(reactionModel)
+	UpdateReactPromise := s.db.SocialStats(tenant).UpdateReactCount(userId, 1)
+	<-UpdateReactPromise
 	err := <-errChan
 	if err != nil {
 		logger.Error("Failed saving reaction", zap.Error(err))
@@ -176,7 +178,8 @@ func (s *ActionsService) UnReact(ctx context.Context, req *socialPb.ReactRequest
 			return nil, err
 		}
 	}
-
+	UpdateReactPromise := s.db.SocialStats(tenant).UpdateReactCount(userId, -1)
+	<-UpdateReactPromise
 	return &socialPb.SocialStatusResponse{Status: "success"}, nil
 }
 
@@ -228,6 +231,9 @@ func (s *ActionsService) Comment(ctx context.Context, req *socialPb.CommentReque
 	commentAsyncSaveRequest := s.db.Comment(tenant).Save(commentModel)
 	<-commentAsyncSaveRequest
 
+	updateCommentPromise := s.db.SocialStats(tenant).UpdateCommentsCount(userId, 1)
+	<-updateCommentPromise
+
 	// fetch the saved comment
 	commentProto := &socialPb.CommentProto{}
 	commentResChan, errChan := s.db.Comment(tenant).FindOneById(commentModel.Id())
@@ -254,6 +260,9 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequ
 	case comment = <-commentResChan:
 		comment.IsDeleted = true
 		<-s.db.Comment(tenant).Save(comment)
+
+		updateCommentPromise := s.db.SocialStats(tenant).UpdateCommentsCount(comment.UserId, -1)
+		<-updateCommentPromise
 	case err := <-errResChan:
 		logger.Error("Probably comment not found", zap.Error(err))
 		return nil, err
@@ -299,7 +308,7 @@ func (s *ActionsService) DeleteComment(ctx context.Context, req *socialPb.IdRequ
 // TODO: fetch nested comments, write extension for fetch
 func (s *ActionsService) FetchComments(ctx context.Context, req *socialPb.CommentFetchRequest) (*socialPb.CommentsFetchResponse, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	comments := s.db.Comment(tenant).GetComments(req.ParentId, int64(req.PageNumber), int64(req.PageSize))
+	comments := s.db.Comment(tenant).GetComments(req.ParentId, req.UserId, int64(req.PageNumber), int64(req.PageSize))
 	commentProtos := []*socialPb.CommentProto{}
 	copier.Copy(&commentProtos, &comments)
 
