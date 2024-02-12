@@ -2,15 +2,11 @@ module github.com/Kotlang/socialGo
 
 go 1.19
 
-replace github.com/SaiNageswarS/go-api-boot v0.1.35-0.20231117084700-7a93047ca703 => ../go-api-boot
-
 require (
-	github.com/SaiNageswarS/go-api-boot v0.1.35-0.20231117084700-7a93047ca703
-	github.com/aws/aws-sdk-go v1.34.28
+	github.com/SaiNageswarS/go-api-boot v0.1.35
 	github.com/google/uuid v1.5.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/jinzhu/copier v0.3.2
-	github.com/joho/godotenv v1.5.1
 	github.com/rs/cors v1.9.0
 	github.com/thoas/go-funk v0.9.3
 	go.mongodb.org/mongo-driver v1.11.3
@@ -35,6 +31,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/keyvault/internal v0.7.0 // indirect
 	github.com/Azure/azure-storage-blob-go v0.14.0 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v0.9.0 // indirect
+	github.com/aws/aws-sdk-go v1.34.28 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
@@ -49,6 +46,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.2 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
