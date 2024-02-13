@@ -4,3 +4,4 @@ generated
 vendor
 .env
 .vscode
+key.json

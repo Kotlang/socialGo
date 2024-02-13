@@ -1,31 +1,18 @@
 package main
 
 import (
-	"os"
-
 	socialPb "github.com/Kotlang/socialGo/generated/social"
-	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/SaiNageswarS/go-api-boot/server"
-	"github.com/joho/godotenv"
 	"github.com/rs/cors"
-	"go.uber.org/zap"
 )
 
 var grpcPort = ":50051"
 var webPort = ":8081"
 
-func init() {
-	err := godotenv.Load()
-	if err != nil {
-		logger.Error("Error loading .env file", zap.Error(err))
-	}
-}
-
 func main() {
 	// go-api-boot picks up keyvault name from environment variable.
-	os.Setenv("AZURE-KEYVAULT-NAME", "kotlang-secrets")
-	server.LoadSecretsIntoEnv(true)
 	inject := NewInject()
+	inject.cloudFns.LoadSecretsIntoEnv()
 
 	corsConfig := cors.New(
 		cors.Options{

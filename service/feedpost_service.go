@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -12,10 +13,9 @@ import (
 	notificationPb "github.com/Kotlang/socialGo/generated/notification"
 	socialPb "github.com/Kotlang/socialGo/generated/social"
 	"github.com/Kotlang/socialGo/models"
-	s3client "github.com/Kotlang/socialGo/s3Client"
 	"github.com/SaiNageswarS/go-api-boot/auth"
-	"github.com/SaiNageswarS/go-api-boot/azure"
 	"github.com/SaiNageswarS/go-api-boot/bootUtils"
+	"github.com/SaiNageswarS/go-api-boot/cloud"
 	"github.com/SaiNageswarS/go-api-boot/logger"
 	"github.com/jinzhu/copier"
 	"github.com/thoas/go-funk"
@@ -27,12 +27,14 @@ import (
 
 type FeedpostService struct {
 	socialPb.UnimplementedUserPostServer
-	db db.SocialDbInterface
+	db       db.SocialDbInterface
+	cloudFns cloud.Cloud
 }
 
-func NewFeedpostService(db db.SocialDbInterface) *FeedpostService {
+func NewFeedpostService(db db.SocialDbInterface, cloudFns cloud.Cloud) *FeedpostService {
 	return &FeedpostService{
-		db: db,
+		db:       db,
+		cloudFns: cloudFns,
 	}
 }
 
@@ -207,7 +209,14 @@ func (s *FeedpostService) GetTags(ctx context.Context, req *socialPb.GetTagsRequ
 
 func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *socialPb.MediaUploadRequest) (*socialPb.MediaUploadURL, error) {
 	userId, tenant := auth.GetUserIdAndTenant(ctx)
-	uploadUrl, downloadUrl := s3client.GetPresignedUrlForPosts(tenant, userId, req.MediaExtension)
+
+	imagePath := fmt.Sprintf("social/%s/%s/%d/%d-image.%s", tenant, userId, time.Now().Year(), time.Now().Unix(), req.MediaExtension)
+	socialBucket := os.Getenv("social_bucket")
+	if socialBucket == "" {
+		return nil, status.Error(codes.Internal, "social_bucket is not set")
+	}
+
+	uploadUrl, downloadUrl := s.cloudFns.GetPresignedUrl(socialBucket, imagePath, 15*time.Minute)
 	return &socialPb.MediaUploadURL{
 		UploadUrl: uploadUrl,
 		MediaUrl:  downloadUrl,
@@ -244,8 +253,12 @@ func (s *FeedpostService) UploadPostMedia(stream socialPb.UserPost_UploadPostMed
 	mediaExtension := bootUtils.GetFileExtension(contentType)
 	// upload imageData to Azure bucket.
 	path := fmt.Sprintf("%s/%s/%d-%d.%s", tenant, userId, time.Now().Unix(), rand.Int(), mediaExtension)
+	socialBucket := os.Getenv("social_bucket")
+	if socialBucket == "" {
+		return status.Error(codes.Internal, "social_bucket is not set")
+	}
 
-	uploadPathChan, errChan := azure.Storage.UploadStream("social-posts", path, imageData)
+	uploadPathChan, errChan := s.cloudFns.UploadStream(socialBucket, path, imageData)
 	select {
 	case uploadPath := <-uploadPathChan:
 		stream.SendAndClose(&socialPb.UploadPostMediaResponse{UploadPath: uploadPath})
