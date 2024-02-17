@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -216,7 +217,17 @@ func (s *FeedpostService) GetMediaUploadUrl(ctx context.Context, req *socialPb.M
 		return nil, status.Error(codes.Internal, "social_bucket is not set")
 	}
 
-	uploadUrl, downloadUrl := s.cloudFns.GetPresignedUrl(socialBucket, imagePath, 15*time.Minute)
+	acceptableExtensions := []string{"jpg", "jpeg", "png"}
+	if !slices.Contains(acceptableExtensions, req.MediaExtension) {
+		return nil, status.Error(codes.InvalidArgument, "Invalid media extension")
+	}
+
+	if req.MediaExtension == "" {
+		req.MediaExtension = "jpg"
+	}
+
+	contentType := fmt.Sprintf("image/%s", req.MediaExtension)
+	uploadUrl, downloadUrl := s.cloudFns.GetPresignedUrl(socialBucket, imagePath, contentType, 15*time.Minute)
 	return &socialPb.MediaUploadURL{
 		UploadUrl: uploadUrl,
 		MediaUrl:  downloadUrl,
