@@ -86,7 +86,7 @@ func GetSocialProfiles(grpcContext context.Context, userIds []string) chan []*so
 				Name:       profile.Name,
 				PhotoUrl:   profile.PhotoUrl,
 				Occupation: "farmer",
-				UserId:     profile.LoginId,
+				UserId:     profile.UserId,
 			}
 		}).([]*socialPb.SocialProfile)
 
@@ -127,7 +127,7 @@ func GetSocialProfile(grpcContext context.Context, userId string) chan *socialPb
 			Name:       resp.Name,
 			PhotoUrl:   resp.PhotoUrl,
 			Occupation: "farmer",
-			UserId:     resp.LoginId,
+			UserId:     resp.UserId,
 		}
 	}()
 
