@@ -144,7 +144,7 @@ func IsUserAdmin(grpcContext context.Context, userId string) chan bool {
 			return
 		}
 
-		client := authPb.NewProfileClient(conn)
+		client := authPb.NewLoginVerifiedClient(conn)
 
 		ctx := prepareCallContext(grpcContext)
 		if ctx == nil {
